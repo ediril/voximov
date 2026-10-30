@@ -1,4 +1,0 @@
-{
-  "extends": "ubuntu24-pipewire",
-  "display": "wayland"
-}

@@ -32,19 +32,16 @@ body:
     attributes:
       label: Package
       options:
-        - Windows EXE
-        - Linux AppImage
-        - Debian / Ubuntu DEB
-        - Fedora RPM
-        - Built from source
         - macOS build
+        - Windows EXE
+        - Built from source
     validations:
       required: true
   - type: input
     id: system
     attributes:
       label: Operating system
-      description: Distribution and version on Linux, Windows or macOS version otherwise. For Linux add the audio server (PulseAudio or PipeWire).
+      description: macOS or Windows version.
     validations:
       required: true
   - type: textarea

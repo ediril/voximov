@@ -34,47 +34,10 @@ jobs:
     uses: ./.github/workflows/windows-build.yml
     secrets: inherit
 
-  linux:
-    needs: version
-    runs-on: ubuntu-22.04
-    env:
-      APPIMAGE_EXTRACT_AND_RUN: 1
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend -> ../build/.cache
-
-      - name: Install build libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y libunwind-14-dev
-          sudo apt-get install -y --no-install-recommends build-essential pkg-config libwebkit2gtk-4.1-dev librsvg2-dev libpulse-dev libgstreamer1.0-dev patchelf file xz-utils squashfs-tools libfuse2 gstreamer1.0-plugins-good gstreamer1.0-libav
-
-      - name: Build DEB, RPM and AppImage
-        run: bin/build-linux all
-
-      - name: Upload Linux packages
-        uses: actions/upload-artifact@v7
-        with:
-          name: simpleVoiceover-linux-x64
-          path: |
-            build/*.deb
-            build/*.rpm
-            build/*.AppImage
-          if-no-files-found: error
-
   draft-release:
     if: ${{ github.ref_type == 'tag' }}
     needs:
       - windows
-      - linux
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -86,14 +49,9 @@ jobs:
           name: simpleVoiceover-windows-x64
           path: release
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: simpleVoiceover-linux-x64
-          path: release
-
       - name: Write checksums
         working-directory: release
-        run: sha256sum -- *.exe *.AppImage *.deb *.rpm | tee checksums.sha256
+        run: sha256sum -- *.exe | tee checksums.sha256
 
       - name: Create the draft release
         env:

@@ -4,7 +4,7 @@
     "active": true,
     "targets": ["app", "dmg"],
     "category": "Music",
-    "license": "MIT",
+    "license": "PolyForm-Strict-1.0.0",
     "shortDescription": "A local voiceover and audio editing studio",
     "icon": ["icons/icon.png"],
     "macOS": {

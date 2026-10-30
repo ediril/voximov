@@ -25,17 +25,28 @@ struct PasteClip {
 }
 
 fn compatible(project: &Project, track: usize, clip: &Clip) -> Result<()> {
-    ensure!(
-        !project.tracks[track].locked,
-        crate::i18n::message("error.trackLocked")
-    );
-    let asset = project
+    let target = &project.tracks[track];
+    ensure!(!target.locked, crate::i18n::message("error.trackLocked"));
+    if clip.script.is_some() {
+        ensure!(
+            target.kind == "voice",
+            crate::i18n::message("error.scriptVoiceTrack")
+        );
+        return Ok(());
+    }
+    let asset_id = clip
+        .asset_id
+        .as_ref()
+        .context(crate::i18n::message("error.sourceMissing"))?;
+    let video = project
         .assets
         .iter()
-        .find(|asset| asset.id == clip.asset_id)
-        .context(crate::i18n::message("error.sourceMissing"))?;
+        .find(|asset| &asset.id == asset_id)
+        .context(crate::i18n::message("error.sourceMissing"))?
+        .kind
+        == "video";
     ensure!(
-        (asset.kind == "video") == (project.tracks[track].kind == "video"),
+        video == (target.kind == "video"),
         crate::i18n::message("error.selectCompatibleTrack")
     );
     Ok(())
@@ -95,6 +106,10 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
                 let to = (original.start + last / SAMPLE_RATE as f64)
                     .min(original.start + original.duration);
                 let whole = first == 0. && last == duration_frames;
+                ensure!(
+                    whole || original.script.is_none(),
+                    crate::i18n::message("error.scriptClipWhole")
+                );
                 if !remove {
                     let target = source as i64 + shift;
                     ensure!(

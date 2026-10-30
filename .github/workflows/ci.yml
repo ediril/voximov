@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 permissions:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   frontend:
-    runs-on: ubuntu-22.04
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
 
@@ -53,9 +53,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-          - windows-latest
           - macos-latest
+          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -69,24 +68,17 @@ jobs:
         with:
           workspaces: backend -> ../build/.cache
 
-      - name: Install desktop libraries
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y libunwind-14-dev
-          sudo apt-get install -y --no-install-recommends build-essential pkg-config libwebkit2gtk-4.1-dev librsvg2-dev libpulse-dev libgstreamer1.0-dev
-
       - name: Check formatting
-        if: runner.os == 'Linux'
+        if: runner.os == 'macOS'
         run: cargo fmt --manifest-path backend/Cargo.toml --check
 
       - name: Clippy
-        if: runner.os == 'Linux'
+        if: runner.os == 'macOS'
         run: cargo clippy --manifest-path backend/Cargo.toml --all-targets --locked --features desktop -- -D warnings
 
       - name: Engine tests
         run: cargo test --manifest-path backend/Cargo.toml --locked
 
       - name: Compile the desktop application
-        if: runner.os != 'Linux'
+        if: runner.os != 'macOS'
         run: cargo check --manifest-path backend/Cargo.toml --locked --features desktop

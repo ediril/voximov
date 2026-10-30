@@ -4,6 +4,10 @@ All notable changes to simpleVoiceover are recorded here. The format follows [Ke
 
 ## [Unreleased]
 
+### Removed
+
+- Linux support. macOS is now the primary platform and Windows is kept. The Linux AppImage, DEB and RPM packages, their build scripts and release job, and the Linux compatibility test bench were removed.
+
 ## [1.3.1] - 2026-10-15
 
 ### Added

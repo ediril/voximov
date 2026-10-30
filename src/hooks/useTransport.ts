@@ -16,6 +16,7 @@ interface Options {
   armedTrack?: Track
   assets: MediaAsset[]
   tracks: Track[]
+  generating: boolean
 }
 
 export function useTransport({
@@ -29,6 +30,7 @@ export function useTransport({
   armedTrack,
   assets,
   tracks,
+  generating,
 }: Options) {
   const [position, setPosition] = useState(0)
   const [seekRevision, setSeekRevision] = useState(0)
@@ -114,6 +116,10 @@ export function useTransport({
         await pause()
         return
       }
+      if (generating) {
+        setNotice(t('transport.waitForGeneration'))
+        return
+      }
       if (!duration) {
         setNotice(t('notice.addMedia'))
         return
@@ -149,6 +155,10 @@ export function useTransport({
         setInputLevel(0)
         videoRef.current?.pause()
       }
+      return
+    }
+    if (generating) {
+      setNotice(t('transport.waitForGeneration'))
       return
     }
     if (!armedTrack) {
@@ -189,7 +199,11 @@ export function useTransport({
   const previewPlaying = playing && !seekPending
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !videoClip) return
+    if (!video) return
+    if (!videoClip) {
+      video.pause()
+      return
+    }
     const desired = previewPosition - videoClip.start + videoClip.offset
     synchronizeVideo(video, desired, previewPlaying, showError, seekRevision)
   }, [previewPosition, previewPlaying, videoClip, showError, seekRevision])
