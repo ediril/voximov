@@ -13,6 +13,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+const TICKET: &str = "export-1";
+
 struct Tools {
     ffmpeg: PathBuf,
     ffprobe: PathBuf,
@@ -93,6 +95,7 @@ fn silent_asset(store: &Store, name: &str, kind: &str, duration: f64) -> Result<
         sample_rate: SAMPLE_RATE,
         waveform: vec![],
         peak_frames: 256,
+        frame_rate: None,
     };
     std::fs::write(store.pcm(&asset.id), [])?;
     Ok(asset)
@@ -139,7 +142,10 @@ fn timeline_store(
 }
 
 fn export(store: &mut Store, destination: &Path) -> Result<Value> {
-    commands::execute(store, &json!({"command":"export_video","path":destination}))
+    commands::execute(
+        store,
+        &json!({"command":"export_video","path":destination,"ticket":TICKET}),
+    )
 }
 
 fn frame_colors(tools: &Tools, file: &Path) -> Result<String> {
@@ -423,7 +429,7 @@ fn cancelling_a_video_export_removes_every_partial_file() -> Result<()> {
         let seen = labels.clone();
         store.progress = Progress::new(move |event| {
             if event.label == crate::i18n::message(phase) {
-                cancellation.request();
+                cancellation.request(TICKET);
             }
             seen.lock().unwrap().push(event.label);
         });
@@ -439,5 +445,47 @@ fn cancelling_a_video_export_removes_every_partial_file() -> Result<()> {
         );
         assert!(!store.cancellation.requested());
     }
+    Ok(())
+}
+
+#[test]
+fn imported_videos_store_their_frame_rate_and_older_projects_probe_it_once() -> Result<()> {
+    let Some(_tools) = tools("the frame rate probing test") else {
+        return Ok(());
+    };
+    let temporary = tempfile::tempdir()?;
+    let mut store = edited_store(temporary.path())?;
+    let probed = ffmpeg::probe(
+        &ffmpeg::locate(Tool::Ffprobe),
+        fixture().as_os_str(),
+        &crate::cancellation::Cancellation::default(),
+    )?
+    .frame_rate;
+    assert_eq!(store.project.assets[0].frame_rate, Some(probed));
+    let snapshot = commands::execute(&mut store, &json!({"command":"snapshot"}))?;
+    assert_eq!(snapshot["frameRate"], json!(probed));
+    let saved = temporary.path().join("old.voximov");
+    store.project.assets[0].frame_rate = None;
+    store.save(&saved)?;
+    let mut reopened = Store::open(
+        temporary.path().join("other-config"),
+        Some(temporary.path().join("other-work")),
+    )?;
+    reopened.load(&saved)?;
+    assert_eq!(reopened.project.assets[0].frame_rate, None);
+    let snapshot = commands::execute(&mut reopened, &json!({"command":"snapshot"}))?;
+    assert_eq!(snapshot["frameRate"], json!(probed));
+    assert_eq!(reopened.project.assets[0].frame_rate, Some(probed));
+    assert!(!reopened.config.dirty);
+    commands::execute(&mut reopened, &json!({"command":"split_at","position":1.}))?;
+    commands::execute(&mut reopened, &json!({"command":"undo"}))?;
+    assert_eq!(reopened.project.assets[0].frame_rate, Some(probed));
+    reopened.save(&saved)?;
+    let mut again = Store::open(
+        temporary.path().join("third-config"),
+        Some(temporary.path().join("third-work")),
+    )?;
+    again.load(&saved)?;
+    assert_eq!(again.project.assets[0].frame_rate, Some(probed));
     Ok(())
 }

@@ -106,18 +106,19 @@ pub fn export_filename(name: &str, format: &str, language: &str) -> String {
     format!("{base}.{format}")
 }
 
-pub fn export(format: &str, language: &str, name: &str) -> Result<Option<PathBuf>> {
+pub fn export(language: &str, name: &str) -> Result<Option<PathBuf>> {
     #[cfg(feature = "desktop")]
     {
         Ok(rfd::FileDialog::new()
             .set_title(crate::i18n::text(language, "dialog.exportAudio"))
-            .add_filter(format.to_uppercase(), &[format])
-            .set_file_name(export_filename(name, format, language))
+            .add_filter("WAV", &["wav"])
+            .add_filter("MP3", &["mp3"])
+            .set_file_name(export_filename(name, "wav", language))
             .save_file())
     }
     #[cfg(not(feature = "desktop"))]
     {
-        let _ = (format, language, name);
+        let _ = (language, name);
         bail!(crate::i18n::message("error.desktopOnly"))
     }
 }

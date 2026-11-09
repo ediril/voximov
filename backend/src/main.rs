@@ -14,6 +14,7 @@ mod dsp;
 mod editing;
 mod ffmpeg;
 mod filesystem;
+mod frame_rates;
 mod generator;
 #[cfg(test)]
 mod generator_tests;
@@ -49,6 +50,8 @@ mod server;
 mod server_tests;
 mod session;
 mod speech;
+#[cfg(test)]
+mod split_tests;
 mod state;
 mod storage;
 #[cfg(test)]

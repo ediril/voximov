@@ -111,13 +111,10 @@ fn script_clips_cannot_be_split_or_partially_edited() -> Result<()> {
     let mut store = new_store(temporary.path())?;
     let clip_id = add_script(&mut store, 1, 0., 4.)?;
     let track_id = store.project.tracks[1].id.clone();
-    assert!(
-        run(
-            &mut store,
-            json!({"command":"clip_split","trackId":track_id,"clipId":clip_id,"position":2.}),
-        )
-        .is_err()
-    );
+    let history = store.history.len();
+    run(&mut store, json!({"command":"split_at","position":2.}))?;
+    assert_eq!(store.history.len(), history);
+    assert_eq!(script_clip(&store, &clip_id).duration, 4.);
     assert!(
         run(
             &mut store,

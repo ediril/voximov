@@ -27,6 +27,15 @@ import { isSpeechUnavailable, speechNoticeDuration } from './timeline/script'
 import type { TimelineTool } from './timeline/types'
 import { emptyAudioDevices } from './audio/devices'
 import { hasExportableVideo } from './timeline/videoExport'
+import { canSplitAt } from './timeline/splitting'
+import {
+  defaultTimeDisplay,
+  effectiveMode,
+  nextMode,
+  steppedPosition,
+  withStep,
+  type TimeDisplay,
+} from './timeline/timeDisplay'
 import {
   copySelection,
   selectionFromRegions,
@@ -48,6 +57,8 @@ export function useStudio() {
   const [trackToRemove, setTrackToRemove] = useState<Track | null>(null)
   const [busy, setBusy] = useState('')
   const [exportingVideo, setExportingVideo] = useState(false)
+  const exportTicket = useRef('')
+  const [timeDisplay, setTimeDisplay] = useState<TimeDisplay>(defaultTimeDisplay)
   const visibleBusy = useOperationIndicator(busy)
   const [progress, setProgress] = useState<OperationProgress | null>(null)
   const [notice, setNotice] = useTransientMessage()
@@ -68,6 +79,8 @@ export function useStudio() {
     [snapshot],
   )
   const duration = snapshot?.duration ?? 0
+  const frameRate = snapshot?.frameRate ?? null
+  const timeMode = effectiveMode(timeDisplay.mode, frameRate)
   const selectedTrack: Track | undefined =
     tracks.find((track) => track.id === selectedTrackId) ?? tracks[0]
   const selectClip = (id: string | null) => {
@@ -97,6 +110,7 @@ export function useStudio() {
       setLanguagePreference(
         validPreference(value.config.language) ? value.config.language : 'system',
       )
+      setTimeDisplay(value.config.timeDisplay ?? defaultTimeDisplay)
       setSnapshot(value)
       void client
         .setAudioDevices(value.config.inputDevice ?? '', value.config.outputDevice ?? '')
@@ -186,6 +200,23 @@ export function useStudio() {
       showError(reason)
     }
   }
+  const changeTimeDisplay = async (next: TimeDisplay) => {
+    if (busy) return
+    const previous = timeDisplay
+    setTimeDisplay(next)
+    try {
+      await request('time_preferences_patch', { timeDisplay: next })
+    } catch (reason) {
+      setTimeDisplay(previous)
+      showError(reason)
+    }
+  }
+  const cycleTimeMode = () => {
+    if (frameRate) void changeTimeDisplay({ ...timeDisplay, mode: nextMode(timeMode, frameRate) })
+  }
+  const changeTimeStep = (step: number) => {
+    void changeTimeDisplay(withStep(timeDisplay, timeMode, step))
+  }
   const changeAudioDevices = async (inputDevice: string, outputDevice: string) => {
     if (busy || audioDevicesPending) return
     setAudioDevicesPending(true)
@@ -249,19 +280,23 @@ export function useStudio() {
     pause: transport.pause,
     showError,
   })
-  const exportAudio = async (trackId: string | null = null, format: 'wav' | 'mp3' = 'wav') => {
-    const result = await action(t('action.export', { value0: format.toUpperCase() }), 'export', {
-      trackId,
-      format,
-    })
+  const exportAudio = async (trackId: string | null = null) => {
+    const result = await action(t('action.exportAudio'), 'export', { trackId })
     if (result?.saved)
-      setNotice(t('notice.exported', { value0: format.toUpperCase(), value1: result.path ?? '' }))
+      setNotice(
+        t('notice.exported', {
+          value0: (result.format ?? 'wav').toUpperCase(),
+          value1: result.path ?? '',
+        }),
+      )
   }
   const exportVideo = async () => {
     if (operationBlocked) return
+    const ticket = crypto.randomUUID()
+    exportTicket.current = ticket
     setExportingVideo(true)
     try {
-      const result = await action(t('action.exportVideo'), 'export_video')
+      const result = await action(t('action.exportVideo'), 'export_video', { ticket })
       if (result?.cancelled) setNotice(t('notice.exportCancelled'))
       else if (result?.saved)
         setNotice(t('notice.exported', { value0: 'MP4', value1: result.path ?? '' }))
@@ -270,7 +305,7 @@ export function useStudio() {
     }
   }
   const cancelVideoExport = () => {
-    void request('export_video_cancel').catch(showError)
+    void request('export_video_cancel', { ticket: exportTicket.current }).catch(showError)
   }
   const removeClip = () => {
     if (selection?.regions.length) {
@@ -371,8 +406,15 @@ export function useStudio() {
   const editClip = (trackId: string, clipId: string, mode: ClipEditMode, delta: number) => {
     return action(t('action.editClip'), 'clip_edit', { trackId, clipId, mode, delta }).then(Boolean)
   }
-  const splitClip = (trackId: string, clipId: string, position: number) => {
-    void action(t('action.splitClip'), 'clip_split', { trackId, clipId, position })
+  const canSplit = !operationBlocked && canSplitAt(tracks, transport.position, frameRate)
+  const splitAtPlayhead = () => {
+    if (!canSplit) return
+    void action(t('action.splitClip'), 'split_at', { position: transport.position })
+  }
+  const stepPlayhead = (direction: 1 | -1, multiplier: number) => {
+    transport.seek(
+      steppedPosition(transport.position, direction, multiplier, timeDisplay, frameRate),
+    )
   }
   const addTrack = () => {
     void action(t('action.addTrack'), 'track_add')
@@ -413,6 +455,9 @@ export function useStudio() {
     pasteClips,
     seek: transport.seek,
     setTool,
+    splitAtPlayhead,
+    cycleTimeMode,
+    stepPlayhead,
     blocked: !!lifecycle.confirmMode || !!trackToRemove || help || settings,
   })
   return {
@@ -479,7 +524,13 @@ export function useStudio() {
     removeAsset,
     showError,
     editClip,
-    splitClip,
+    canSplit,
+    splitAtPlayhead,
+    frameRate,
+    timeDisplay,
+    timeMode,
+    cycleTimeMode,
+    changeTimeStep,
     addTrack,
     chooseWorkingDirectory,
     importNative,

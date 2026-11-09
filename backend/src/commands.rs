@@ -13,7 +13,7 @@ use std::{
 };
 
 pub fn snapshot(store: &Store) -> Value {
-    json!({"project":store.project,"config":store.config,"duration":store.project.duration(),"canUndo":!store.history.is_empty(),"canRedo":!store.redo.is_empty()})
+    json!({"project":store.project,"config":store.config,"duration":store.project.duration(),"frameRate":store.project.frame_rate(),"canUndo":!store.history.is_empty(),"canRedo":!store.redo.is_empty()})
 }
 pub(crate) fn text<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
     value[key].as_str().with_context(|| {
@@ -73,6 +73,7 @@ pub fn decode_source(store: &mut Store, source: &Path, name: &str, kind: &str) -
             sample_rate: SAMPLE_RATE,
             waveform: vec![],
             peak_frames: 256,
+            frame_rate: None,
         },
         &store.progress,
     );
@@ -109,7 +110,12 @@ pub fn import_source(
         position.is_finite() && position >= 0.,
         crate::i18n::message("error.position")
     );
-    let decoded = decode_source(store, &source, &name, &kind)?;
+    let mut decoded = decode_source(store, &source, &name, &kind)?;
+    if kind == "video"
+        && let Some(asset) = decoded.assets.first_mut()
+    {
+        asset.frame_rate = crate::frame_rates::probe_imported(store, &asset.id);
+    }
     let assets = decoded.assets.clone();
     let result = (|| {
         let mut assets = assets.into_iter();
@@ -202,6 +208,22 @@ fn project_name(store: &Store) -> String {
         .unwrap_or_else(|| store.project.name.clone())
 }
 
+pub fn audio_destination(chosen: PathBuf) -> (PathBuf, &'static str) {
+    let extension = chosen
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase);
+    match extension.as_deref() {
+        Some("mp3") => (chosen, "mp3"),
+        Some("wav") => (chosen, "wav"),
+        _ => {
+            let mut path = chosen.into_os_string();
+            path.push(".wav");
+            (path.into(), "wav")
+        }
+    }
+}
+
 fn check_export_destination(store: &Store, destination: &Path) -> Result<()> {
     ensure!(
         destination.is_absolute(),
@@ -216,12 +238,22 @@ fn check_export_destination(store: &Store, destination: &Path) -> Result<()> {
 }
 
 pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
+    crate::frame_rates::resolve(store);
+    let result = run(store, value);
+    crate::frame_rates::resolve(store);
+    result
+}
+
+fn run(store: &mut Store, value: &Value) -> Result<Value> {
     let command = text(value, "command")?;
     let language = value["language"].as_str().unwrap_or("en");
     match command {
         "snapshot" => {}
         "preferences_patch" => {
             store.set_language(text(value, "preference")?)?;
+        }
+        "time_preferences_patch" => {
+            store.set_time_display(serde_json::from_value(value["timeDisplay"].clone())?)?;
         }
         "speech_preferences_patch" => {
             store.set_speech(text(value, "url")?, text(value, "voice")?)?;
@@ -332,11 +364,6 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
             imported?;
         }
         "export" => {
-            let format = text(value, "format")?;
-            ensure!(
-                ["wav", "mp3"].contains(&format),
-                crate::i18n::message("error.format")
-            );
             let name = if let Some(track_id) = value["trackId"].as_str() {
                 store
                     .project
@@ -349,14 +376,15 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
             } else {
                 project_name(store)
             };
-            let destination = if let Some(path) = value["path"].as_str() {
+            let chosen = if let Some(path) = value["path"].as_str() {
                 Some(PathBuf::from(path))
             } else {
-                native_files::export(format, language, &name)?
+                native_files::export(language, &name)?
             };
-            let Some(destination) = destination else {
+            let Some(chosen) = chosen else {
                 return Ok(json!({"saved":false}));
             };
+            let (destination, format) = audio_destination(chosen);
             check_export_destination(store, &destination)?;
             let temporary = destination.with_extension(format!("{}.partial", id()));
             let rendered = mixer::render(store, &temporary, value["trackId"].as_str(), format);
@@ -365,10 +393,15 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
                 return Err(error);
             }
             crate::filesystem::replace_file(&temporary, &destination)?;
-            return Ok(json!({"saved":true,"path":destination}));
+            return Ok(json!({"saved":true,"path":destination,"format":format}));
         }
         "export_video" => {
-            let _operation = store.cancellation.begin();
+            let ticket = text(value, "ticket")?;
+            ensure!(
+                !ticket.is_empty() && ticket.len() <= 128,
+                crate::i18n::formatted_message("error.fieldMissing", &[("key", "ticket".into())])
+            );
+            let _operation = store.cancellation.begin(ticket);
             ensure!(
                 cfg!(target_os = "macos"),
                 crate::i18n::message("error.videoExportUnsupported")

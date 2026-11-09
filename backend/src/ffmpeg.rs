@@ -1,7 +1,8 @@
 use crate::{
     cancellation::{Cancellation, Cancelled},
+    model::FrameRate,
     progress::Progress,
-    video_export::{FrameRate, VideoFormat},
+    video_export::VideoFormat,
 };
 use anyhow::{Context, Result};
 use serde_json::Value;

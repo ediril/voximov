@@ -22,17 +22,8 @@ export function useClipDrag(
   viewport: TimelineViewport,
   assetMap: Map<string, MediaAsset>,
 ) {
-  const {
-    tracks,
-    recording,
-    operationPending,
-    tool,
-    onSelectTrack,
-    onSelectClip,
-    onSplitClip,
-    onEditClip,
-  } = props
-  const { rulerRef, view, pixelsPerSecond } = viewport
+  const { tracks, recording, operationPending, onSelectTrack, onSelectClip, onEditClip } = props
+  const { pixelsPerSecond } = viewport
   const [preview, setPreview] = useState<{ trackId: string; clip: Clip } | null>(null)
   const drag = useRef<ClipDrag | null>(null)
   const pending = useRef<ClipDrag | null>(null)
@@ -63,13 +54,6 @@ export function useClipDrag(
     onSelectClip(clip.id)
     if (track.locked || recording || operationPending || pending.current) return
     const edge = (event.target as HTMLElement).closest<HTMLElement>('[data-trim]')?.dataset.trim
-    if (tool === 'split' && !edge) {
-      if (clip.script) return
-      const left = rulerRef.current?.getBoundingClientRect().left ?? 0
-      const time = view.start + (event.clientX - left) / pixelsPerSecond
-      onSplitClip(track.id, clip.id, time)
-      return
-    }
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     drag.current = {

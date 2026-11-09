@@ -572,17 +572,6 @@ kbd {
   border-radius: 2px;
   animation: pulse 1s infinite;
 }
-.record-button kbd {
-  border-color: #563d40;
-  color: #a97676;
-  font-size: 9px;
-  padding: 1px 4px;
-  margin-left: 4px;
-}
-.monitor-button.enabled {
-  color: var(--accent);
-  background: #384130;
-}
 .statusbar {
   height: 34px;
   min-height: 34px;
@@ -1119,11 +1108,6 @@ kbd {
   margin-top: 12px;
   padding-top: 9px;
 }
-.track-exports > span {
-  font-size: 9px;
-  color: #8b9981;
-  margin-right: auto;
-}
 .track-exports > button {
   font-size: 9px;
   padding: 4px 8px;
@@ -1379,9 +1363,6 @@ kbd {
   color: #91a17f;
   font-size: 9px;
 }
-.menu-formats {
-  display: flex;
-}
 .inspector-tabs {
   padding-left: 46px;
   padding-right: 4px;
@@ -1401,24 +1382,9 @@ kbd {
 .transport {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  gap: inherit;
   min-width: 0;
-  flex: 1;
-  margin: 0 12px;
-}
-.transport-controls,
-.transport-readout {
-  position: static;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
   flex-shrink: 0;
-  white-space: nowrap;
-}
-.transport-readout {
-  gap: 8px;
 }
 .transport .icon-button {
   width: 26px;
@@ -1429,15 +1395,21 @@ kbd {
   height: 26px;
 }
 .transport .record-button {
+  width: 26px;
   height: 26px;
-  padding: 0 8px;
-  gap: 6px;
-  font-size: 10px;
 }
-.transport .record-button kbd {
-  margin-left: 0;
+.transport .export-button {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 .time-display {
+  margin-left: 6px;
+  white-space: nowrap;
   display: flex;
   align-items: baseline;
   gap: 7px;
@@ -1476,16 +1448,23 @@ kbd {
   justify-content: flex-end;
 }
 @media (max-width: 1100px) {
-  .transport {
-    gap: 6px;
-    margin: 0 6px;
+  .tl-toolbar {
+    gap: 10px;
   }
-  .transport .record-button kbd,
+  .tl-toolbar-spacer {
+    margin-left: -10px;
+  }
+  .tl-zoom-label {
+    display: none;
+  }
+  .transport .export-button > span,
   .time-display > span {
     display: none;
   }
-  .transport-readout {
-    gap: 5px;
+  .transport .export-button {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
   }
   .record-target .mini-meter {
     width: 22px;
@@ -1600,6 +1579,7 @@ kbd {
   opacity: 0.5;
 }
 .track-exports > .track-delete {
+  margin-left: auto;
   color: var(--muted);
   border-color: transparent;
 }

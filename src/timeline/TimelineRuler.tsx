@@ -1,11 +1,22 @@
 import { t } from '../i18n'
-import { formatTime } from '../types'
 import type { TimelineProps } from './types'
 import type { TimelineViewport } from './useTimelineViewport'
-type Props = Pick<TimelineProps, 'recording' | 'position' | 'duration' | 'onSeek'> & {
+import { formatPosition, rulerLabel } from './timeDisplay'
+type Props = Pick<
+  TimelineProps,
+  'recording' | 'position' | 'duration' | 'onSeek' | 'timeMode' | 'frameRate'
+> & {
   viewport: TimelineViewport
 }
-export default function TimelineRuler({ recording, position, duration, onSeek, viewport }: Props) {
+export default function TimelineRuler({
+  recording,
+  position,
+  duration,
+  onSeek,
+  timeMode,
+  frameRate,
+  viewport,
+}: Props) {
   const { rulerRef, extent, seekAt, ticks, view, pixelsPerSecond, tickStep } = viewport
   return (
     <div className="tl-ruler-row">
@@ -22,7 +33,7 @@ export default function TimelineRuler({ recording, position, duration, onSeek, v
         aria-valuemin={0}
         aria-valuemax={Math.max(extent, position)}
         aria-valuenow={position}
-        aria-valuetext={formatTime(position, true)}
+        aria-valuetext={formatPosition(position, timeMode, frameRate)}
         aria-disabled={recording}
         onPointerDown={(event) => {
           if (event.button === 0 && !recording) {
@@ -39,16 +50,7 @@ export default function TimelineRuler({ recording, position, duration, onSeek, v
         }}
         onKeyDown={(event) => {
           if (recording) return
-          const next =
-            event.key === 'ArrowRight'
-              ? position + (event.shiftKey ? 5 : 1)
-              : event.key === 'ArrowLeft'
-                ? position - (event.shiftKey ? 5 : 1)
-                : event.key === 'Home'
-                  ? 0
-                  : event.key === 'End'
-                    ? duration
-                    : null
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? duration : null
           if (next !== null) {
             event.preventDefault()
             event.stopPropagation()
@@ -62,7 +64,7 @@ export default function TimelineRuler({ recording, position, duration, onSeek, v
             key={tick}
             style={{ left: (tick - view.start) * pixelsPerSecond }}
           >
-            {tickStep < 1 ? `${formatTime(tick)}.${Math.round((tick % 1) * 10)}` : formatTime(tick)}
+            {rulerLabel(tick, tickStep, timeMode, frameRate)}
           </span>
         ))}
       </div>

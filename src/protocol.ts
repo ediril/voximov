@@ -4,6 +4,7 @@ import type { LanguagePreference } from './i18n'
 import type { EffectPreset } from './effectPresets'
 import type { ClipRegion, ClipClipboard } from './timeline/selection'
 import type { AudioDeviceCatalog } from './audio/devices'
+import type { FrameRate, TimeDisplay } from './timeline/timeDisplay'
 
 export interface OperationProgress {
   label: string
@@ -28,8 +29,10 @@ export interface Snapshot {
     effectPresets?: EffectPreset[]
     inputDevice?: string
     outputDevice?: string
+    timeDisplay?: TimeDisplay
   }
   duration: number
+  frameRate?: FrameRate | null
   canUndo: boolean
   canRedo: boolean
 }
@@ -48,6 +51,7 @@ export interface GenerationEvent {
 export interface CommandPayloads {
   snapshot: Record<string, never>
   preferences_patch: { preference: LanguagePreference }
+  time_preferences_patch: { timeDisplay: TimeDisplay }
   audio_preferences_patch: { inputDevice: string; outputDevice: string }
   audio_devices: Record<string, never>
   audio_devices_sync: Record<string, never>
@@ -64,9 +68,9 @@ export interface CommandPayloads {
   open: Record<string, never>
   import_native: { trackId: string; position: number }
   import_paths: { paths: string[]; trackId: string; position: number }
-  export: { trackId: string | null; format: 'wav' | 'mp3' }
-  export_video: Record<string, never>
-  export_video_cancel: Record<string, never>
+  export: { trackId: string | null }
+  export_video: { ticket: string }
+  export_video_cancel: { ticket: string }
   track_patch: { trackId: string; patch: Partial<Track> }
   track_add: Record<string, never>
   track_remove: { trackId: string }
@@ -74,7 +78,7 @@ export interface CommandPayloads {
   clip_place: { trackId: string; assetId: string; position: number }
   asset_remove: { assetId: string }
   clip_edit: { trackId: string; clipId: string; mode: ClipEditMode; delta: number }
-  clip_split: { trackId: string; clipId: string; position: number }
+  split_at: { position: number }
   undo: Record<string, never>
   redo: Record<string, never>
   play: { position: number }
@@ -96,6 +100,7 @@ export interface CommandResult {
   saved?: boolean
   cancelled?: boolean
   path?: string
+  format?: 'wav' | 'mp3'
   snapshot?: Snapshot
   regions?: ClipRegion[]
   audioDevices?: AudioDeviceCatalog

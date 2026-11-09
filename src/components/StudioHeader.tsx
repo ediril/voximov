@@ -112,43 +112,26 @@ export default function StudioHeader({
             <FolderOpen size={16} />
             {t('project.workingDirectory')}{' '}
           </button>
-          <span className="menu-section">{t('export.mix')}</span>
-          <div className="menu-formats">
-            <button disabled={disabled || !duration} onClick={() => run(() => exportAudio())}>
-              <Download size={14} />
-              WAV
-            </button>
-            <button
-              disabled={disabled || !duration}
-              onClick={() => run(() => exportAudio(null, 'mp3'))}
-            >
-              <Download size={14} />
-              MP3
-            </button>
-          </div>
           <button disabled={disabled || !canExportVideo} onClick={() => run(exportVideo)}>
             <Film size={16} />
             {t('export.video')}
+          </button>
+          <button disabled={disabled || !duration} onClick={() => run(() => exportAudio())}>
+            <Download size={16} />
+            {t('export.audio')}
           </button>
           {selectedTrack && (
             <>
               <span className="menu-section">
                 {t('export.trackPrefix')} {localizedName(selectedTrack.name)}
               </span>
-              <div className="menu-formats">
-                <button
-                  disabled={disabled || !selectedTrack.clips.length}
-                  onClick={() => run(() => exportAudio(selectedTrack.id))}
-                >
-                  WAV
-                </button>
-                <button
-                  disabled={disabled || !selectedTrack.clips.length}
-                  onClick={() => run(() => exportAudio(selectedTrack.id, 'mp3'))}
-                >
-                  MP3
-                </button>
-              </div>
+              <button
+                disabled={disabled || !selectedTrack.clips.length}
+                onClick={() => run(() => exportAudio(selectedTrack.id))}
+              >
+                <Download size={16} />
+                {t('export.track')}
+              </button>
             </>
           )}
           <button onClick={() => run(() => setSettings(true))}>

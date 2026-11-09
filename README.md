@@ -21,13 +21,14 @@ stays untouched.
 ## Features
 
 - Record from the microphone at the playhead while the other tracks play.
-- Split with 48 kHz sample accuracy, move clips between tracks, copy and paste sections, and undo
-  any edit.
+- Split every track at the playhead in one step, with 48 kHz sample accuracy and on video frame
+  boundaries. Move clips between tracks, copy and paste sections, and undo any edit.
+- Show positions as time, frame numbers or timecode, and step the playhead with the arrow keys.
 - Voice effects with presets: high-pass, equalizer, compressor, expander and more.
 - Loudness normalization to −16 LUFS and a −1.5 dBTP true-peak ceiling by default.
 - Mixer with volume, pan, mute and solo per track.
 - Video preview for H.264 MP4 and Matroska, with one track per audio stream.
-- Export a single track or the whole mix as WAV or MP3.
+- Export a single track or the whole mix as WAV or MP3; pick the format in the save dialog.
 - On macOS, export the edited video with the full mix as an MP4, encoded on the Mac's hardware
   H.264 encoder. Gaps between video clips become black frames.
 - AI voiceover from a written script with Kokoro, running locally.
@@ -70,7 +71,8 @@ GitHub-hosted runners. The app needs the WebView2 Runtime.
 1. Open the menu at the top left and import a video, or drop it on the window.
 2. Put on headphones, move the playhead, and press <kbd>R</kbd> to record on the **My voice**
    track while the other tracks play. Press <kbd>R</kbd> again to finish.
-3. Edit: split with <kbd>X</kbd>, select with <kbd>V</kbd>, and drag clips or their edges.
+3. Edit: split every track at the playhead with <kbd>S</kbd>, select with <kbd>V</kbd>, and drag
+   clips or their edges.
 4. Shape your voice in the **Effects** tab and balance the tracks in the **Mixer** tab.
 5. Export the mix, or a single track from the mixer, as WAV or MP3, or export the video as MP4.
    Save the project with <kbd>Cmd</kbd>+<kbd>S</kbd>.
@@ -116,8 +118,12 @@ On macOS, <kbd>Cmd</kbd> works in place of <kbd>Ctrl</kbd> except for wheel zoom
 | --------------------- | -------------------------------- |
 | Space                 | Play / pause                     |
 | R                     | Start / finish recording         |
-| V / X                 | Select / split tool              |
-| Delete                | Remove selected clip             |
+| V                     | Select tool                      |
+| S                     | Split clips at the playhead      |
+| Delete / Backspace    | Remove selected clip             |
+| ← / →                 | Move the playhead one step       |
+| Shift+← / Shift+→     | Move the playhead ten steps      |
+| T                     | Time, frames or timecode         |
 | Home                  | Go to start                      |
 | Ctrl+S / Ctrl+Shift+S | Save / save as                   |
 | Ctrl+Z / Ctrl+Shift+Z | Undo / redo                      |

@@ -54,6 +54,7 @@ pub fn execute(store: &mut Store, session: &mut AudioSession, value: &Value) -> 
                         "track_patch",
                         "snapshot",
                         "preferences_patch",
+                        "time_preferences_patch",
                         "audio_preferences_patch",
                         "preset_save"
                     ]
@@ -72,6 +73,7 @@ pub fn execute(store: &mut Store, session: &mut AudioSession, value: &Value) -> 
                 "track_patch",
                 "snapshot",
                 "preferences_patch",
+                "time_preferences_patch",
                 "audio_preferences_patch",
                 "preset_save",
             ]

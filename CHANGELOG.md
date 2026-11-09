@@ -8,12 +8,21 @@ All notable changes to Voximov are recorded here. The format follows [Keep a Cha
 
 - Export video on macOS: an MP4 of the first video track as edited on the timeline, with black frames in the gaps and the full mix as AAC audio. It encodes on the hardware H.264 encoder, reports progress, and can be cancelled. The app bundles a slim LGPL build of FFmpeg 8.1.3 made by `scripts/build-ffmpeg.sh`.
 
+- Split at the playhead with <kbd>S</kbd> or the toolbar button: every unlocked track is cut in one undo step, on a video frame boundary when the project has video. Script clips stay whole.
+- Time display modes: time, frame numbers or `HH:MM:SS:FF` timecode for the position readout and the ruler. Press <kbd>T</kbd> or use the toolbar control; frames and timecode need a video clip. The choice is kept in the settings.
+- The arrow keys move the playhead by an adjustable step, and Shift+arrow by ten steps. In frame and timecode modes the playhead lands on frame boundaries.
+- Projects store each video's frame rate. Older projects read it once with FFprobe when it is first needed.
+
 ### Changed
 
+- The timeline toolbar is regrouped: tools and edit actions on the left, playback, recording and export in the middle, and settings, monitoring, zoom and tracks on the right.
+- Export opens a menu with **Export video…** and **Export audio…**. One save dialog offers WAV and MP3, and the chosen file name decides the format. The project menu and the mixer use the same dialog.
+- Cancelling a video export works while the export is still starting, and stops the final join of the encoded parts.
 - The app is renamed to Voximov. New projects are saved as `.voximov` files, and `.justspeak` projects from earlier versions still open. Settings move to `~/.voximov` on macOS and `%LOCALAPPDATA%\Voximov` on Windows; settings in the old folder are not carried over.
 
 ### Removed
 
+- The mouse split tool and its <kbd>X</kbd> shortcut. Use <kbd>S</kbd> to split at the playhead.
 - Linux support. macOS is now the primary platform and Windows is kept. The Linux AppImage, DEB and RPM packages, their build scripts and release job, and the Linux compatibility test bench were removed.
 
 ## [1.3.1] - 2026-10-15

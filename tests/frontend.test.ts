@@ -21,6 +21,10 @@ describe('studio keyboard', () => {
     expect(targetOwnsKey(element('input'), 'KeyR')).toBe(true)
     expect(targetOwnsKey(element('textarea'), 'Space')).toBe(true)
     expect(targetOwnsKey(element('[role="dialog"]'), 'Delete')).toBe(true)
+    expect(targetOwnsKey(element('select'), 'ArrowLeft')).toBe(true)
+    expect(targetOwnsKey(element('input'), 'ArrowRight')).toBe(true)
+    expect(targetOwnsKey(element('button'), 'ArrowRight')).toBe(false)
+    expect(targetOwnsKey(element('[role="slider"]'), 'ArrowLeft')).toBe(false)
   })
   it('leaves shortcuts to the timeline, its clips and the page body', () => {
     expect(targetOwnsKey(element('[role="button"]'), 'Space')).toBe(false)
@@ -35,7 +39,12 @@ describe('studio keyboard', () => {
     expect(key('KeyE')).toBeNull()
     expect(key('KeyR')).toBe('record')
     expect(key('KeyV')).toBe('select')
-    expect(key('KeyX')).toBe('split')
+    expect(key('KeyS')).toBe('split')
+    expect(key('KeyX')).toBeNull()
+    expect(key('KeyT')).toBe('timeMode')
+    expect(key('ArrowLeft')).toBe('stepBack')
+    expect(key('ArrowRight', false, true)).toBe('stepForward')
+    expect(key('ArrowRight', true)).toBeNull()
     expect(key('Delete')).toBe('delete')
     expect(key('Backspace')).toBe('delete')
     expect(key('KeyX', true)).toBeNull()
@@ -47,6 +56,9 @@ describe('studio keyboard', () => {
     expect(key('KeyC', true)).toBe('copy')
     expect(key('KeyV', true)).toBe('paste')
     expect(key('KeyS', true)).toBe('save')
+    expect(
+      shortcutFor({ code: 'KeyS', ctrlKey: false, metaKey: true, shiftKey: false, altKey: false }),
+    ).toBe('save')
     expect(key('KeyS', true, true)).toBe('saveAs')
   })
   it('handles plus and minus on the main keyboard and numpad', () => {

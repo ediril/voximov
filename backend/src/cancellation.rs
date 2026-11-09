@@ -1,35 +1,46 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicU8, Ordering},
-};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-const IDLE: u8 = 0;
-const RUNNING: u8 = 1;
-const CANCELLED: u8 = 2;
+#[derive(Default)]
+struct State {
+    running: Option<String>,
+    cancelled: bool,
+    early: Option<String>,
+}
 
 #[derive(Clone, Default)]
-pub struct Cancellation(Arc<AtomicU8>);
+pub struct Cancellation(Arc<Mutex<State>>);
 
 pub struct Operation(Cancellation);
 
 impl Drop for Operation {
     fn drop(&mut self) {
-        self.0.0.store(IDLE, Ordering::SeqCst);
+        let mut state = self.0.state();
+        state.running = None;
+        state.cancelled = false;
     }
 }
 
 impl Cancellation {
-    pub fn begin(&self) -> Operation {
-        self.0.store(RUNNING, Ordering::SeqCst);
+    fn state(&self) -> MutexGuard<'_, State> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+    pub fn begin(&self, ticket: &str) -> Operation {
+        let mut state = self.state();
+        state.cancelled = state.early.take().as_deref() == Some(ticket);
+        state.running = Some(ticket.to_owned());
         Operation(self.clone())
     }
-    pub fn request(&self) {
-        let _ = self
-            .0
-            .compare_exchange(RUNNING, CANCELLED, Ordering::SeqCst, Ordering::SeqCst);
+    pub fn request(&self, ticket: &str) {
+        let mut state = self.state();
+        if state.running.as_deref() == Some(ticket) {
+            state.cancelled = true;
+        } else {
+            state.early = Some(ticket.to_owned());
+        }
     }
     pub fn requested(&self) -> bool {
-        self.0.load(Ordering::SeqCst) == CANCELLED
+        let state = self.state();
+        state.running.is_some() && state.cancelled
     }
     pub fn check(&self) -> anyhow::Result<()> {
         if self.requested() {

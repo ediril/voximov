@@ -9,13 +9,19 @@ import {
 import { clamp, thumbGeometry, dragViewport, zoomViewport, type ViewWindow } from './viewport'
 import { shortcutFor } from '../shortcuts'
 import type { TimelineProps } from './types'
+import { rulerTicks } from './timeDisplay'
 
 export function useTimelineViewport({
   duration,
   position,
   recording,
   onSeek,
-}: Pick<TimelineProps, 'duration' | 'position' | 'recording' | 'onSeek'>) {
+  timeMode,
+  frameRate,
+}: Pick<
+  TimelineProps,
+  'duration' | 'position' | 'recording' | 'onSeek' | 'timeMode' | 'frameRate'
+>) {
   const [view, setView] = useState<ViewWindow>({ start: 0, span: 60 })
   const [laneWidth, setLaneWidth] = useState(800)
   const rulerRef = useRef<HTMLDivElement>(null)
@@ -58,24 +64,10 @@ export function useTimelineViewport({
     }
   }, [recording, position, view.start, view.span])
 
-  const tickStep = useMemo(() => {
-    const desired = view.span / Math.max(2, laneWidth / 82)
-    return (
-      [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600].find(
-        (step) => step >= desired,
-      ) ?? 3600
-    )
-  }, [view.span, laneWidth])
-  const ticks = useMemo(() => {
-    const values: number[] = []
-    for (
-      let index = Math.ceil(view.start / tickStep);
-      index * tickStep < view.start + view.span;
-      index++
-    )
-      values.push(Math.round(index * tickStep * 1000000) / 1000000)
-    return values
-  }, [view, tickStep])
+  const { step: tickStep, ticks } = useMemo(
+    () => rulerTicks(view, laneWidth, timeMode, frameRate),
+    [view, laneWidth, timeMode, frameRate],
+  )
 
   const seekAt = (clientX: number) => {
     if (recording || !rulerRef.current) return

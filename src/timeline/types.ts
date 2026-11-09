@@ -3,9 +3,11 @@ import type { ReactNode } from 'react'
 import type { ClipEditMode, ScriptClipRef } from '../protocol'
 import type { ClipRegion, TimelineSelection } from './selection'
 import type { ScriptClip, ScriptClipStatus } from './script'
-export type TimelineTool = 'select' | 'split' | 'script'
+import type { FrameRate, TimeDisplay, TimeMode } from './timeDisplay'
+export type TimelineTool = 'select' | 'script'
 export interface TimelineProps {
   transport?: ReactNode
+  monitor?: ReactNode
   tracks: Track[]
   assets: MediaAsset[]
   selectedTrackId: string
@@ -25,7 +27,13 @@ export interface TimelineProps {
     mode: ClipEditMode,
     delta: number,
   ) => Promise<boolean>
-  onSplitClip: (trackId: string, clipId: string, position: number) => void
+  canSplit: boolean
+  onSplitAtPlayhead: () => void
+  timeDisplay: TimeDisplay
+  timeMode: TimeMode
+  frameRate: FrameRate | null
+  onCycleTimeMode: () => void
+  onTimeStepChange: (step: number) => void
   onSeek: (time: number) => void
   position: number
   duration: number

@@ -1,8 +1,8 @@
 use crate::{
-    cancellation::Cancelled,
+    cancellation::{Cancellation, Cancelled},
     ffmpeg::{self, Tool},
     mixer,
-    model::{Project, SAMPLE_RATE, id},
+    model::{FrameRate, Project, SAMPLE_RATE, id},
     storage::Store,
 };
 use anyhow::{Result, ensure};
@@ -10,35 +10,11 @@ use std::{
     collections::HashMap,
     ffi::OsString,
     fs,
+    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
 pub type Samples = u64;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct FrameRate {
-    pub numerator: u32,
-    pub denominator: u32,
-}
-
-impl FrameRate {
-    pub fn frames_at(&self, position: Samples) -> u64 {
-        let scale = SAMPLE_RATE as u128 * self.denominator as u128;
-        ((position as u128 * self.numerator as u128 * 2 + scale) / (scale * 2)) as u64
-    }
-    pub fn seconds(&self, frames: u64) -> f64 {
-        frames as f64 * self.denominator as f64 / self.numerator as f64
-    }
-    pub fn track_timescale(&self) -> u32 {
-        self.numerator * 10_000u32.div_ceil(self.numerator)
-    }
-}
-
-impl std::fmt::Display for FrameRate {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}/{}", self.numerator, self.denominator)
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VideoFormat {
@@ -426,10 +402,30 @@ fn encode_video(
             &progress.range(first as f64 / total as f64, frames as f64 / total as f64),
             &store.cancellation,
         )?;
-        std::io::copy(&mut fs::File::open(batch_file)?, &mut joined)?;
+        append(batch_file, &mut joined, &store.cancellation)?;
     }
+    store.cancellation.check()?;
     joined.sync_all()?;
     Ok(())
+}
+
+const COPY_CHUNK: usize = 1 << 20;
+
+pub fn append(
+    source: &Path,
+    destination: &mut impl Write,
+    cancellation: &Cancellation,
+) -> Result<()> {
+    let mut input = fs::File::open(source)?;
+    let mut buffer = vec![0; COPY_CHUNK];
+    loop {
+        cancellation.check()?;
+        let count = input.read(&mut buffer)?;
+        if count == 0 {
+            return Ok(());
+        }
+        destination.write_all(&buffer[..count])?;
+    }
 }
 
 pub fn export(store: &mut Store, destination: &Path) -> Result<Outcome> {

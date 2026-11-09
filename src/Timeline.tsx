@@ -49,7 +49,7 @@ export default function Timeline(props: TimelineProps) {
   return (
     <section
       ref={viewport.timelineRef}
-      className={`tl-timeline ${tool === 'split' ? 'tl-split-mode' : ''} ${tool === 'script' ? 'tl-script-mode' : ''} ${viewport.panning ? 'is-panning' : ''}`}
+      className={`tl-timeline ${tool === 'script' ? 'tl-script-mode' : ''} ${viewport.panning ? 'is-panning' : ''}`}
       onPointerDownCapture={(event) => {
         viewport.beginPan(event)
         if (event.button === 0) selecting.captureMarquee(event)
@@ -70,12 +70,7 @@ export default function Timeline(props: TimelineProps) {
       }}
       aria-label={t('timeline.editor')}
     >
-      <TimelineToolbar
-        {...props}
-        viewport={viewport}
-        canDelete={canDelete}
-        selectedTrack={selectedTrack}
-      />
+      <TimelineToolbar {...props} viewport={viewport} canDelete={canDelete} />
       <div className="tl-track-area">
         <TimelineRuler {...props} viewport={viewport} />
         {(selecting.preview?.tracks ?? tracks).map((track, index) => (

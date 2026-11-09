@@ -1,4 +1,4 @@
-import { t } from '../i18n'
+import { t, type TranslationKey } from '../i18n'
 import {
   Copy,
   ClipboardPaste,
@@ -11,23 +11,23 @@ import {
   TextCursorInput,
   Trash2,
 } from 'lucide-react'
-import type { Track } from '../types'
 import type { TimelineProps } from './types'
 import type { TimelineViewport } from './useTimelineViewport'
 import { minimumSpan } from './viewport'
+import { stepFor, stepOptions, type TimeMode } from './timeDisplay'
 
 type Props = Pick<
   TimelineProps,
-  | 'tracks'
   | 'transport'
+  | 'monitor'
   | 'tool'
   | 'onToolChange'
   | 'snapping'
   | 'onSnappingChange'
   | 'recording'
   | 'selectedClipId'
-  | 'onSplitClip'
-  | 'position'
+  | 'canSplit'
+  | 'onSplitAtPlayhead'
   | 'onRemoveClip'
   | 'duration'
   | 'onAddTrack'
@@ -36,38 +36,57 @@ type Props = Pick<
   | 'canPaste'
   | 'selection'
   | 'operationPending'
-> & { viewport: TimelineViewport; canDelete: boolean; selectedTrack?: Track }
+  | 'timeDisplay'
+  | 'timeMode'
+  | 'frameRate'
+  | 'onCycleTimeMode'
+  | 'onTimeStepChange'
+> & { viewport: TimelineViewport; canDelete: boolean }
+
+const modeLabels: Record<TimeMode, TranslationKey> = {
+  time: 'timeDisplay.time',
+  frames: 'timeDisplay.frames',
+  timecode: 'timeDisplay.timecode',
+}
+
+const stepLabel = (mode: TimeMode, step: number) =>
+  mode === 'time'
+    ? t('units.secondsValue', { value0: step })
+    : t('units.framesValue', { value0: step })
+
 export default function TimelineToolbar({
-  tracks,
+  transport,
+  monitor,
   tool,
   onToolChange,
   snapping,
   onSnappingChange,
   recording,
   selectedClipId,
-  onSplitClip,
-  position,
+  canSplit,
+  onSplitAtPlayhead,
   onRemoveClip,
   duration,
   onAddTrack,
   viewport,
   canDelete,
-  selectedTrack,
-  transport,
   onCopy,
   onPaste,
   canPaste,
   selection,
   operationPending,
+  timeDisplay,
+  timeMode,
+  frameRate,
+  onCycleTimeMode,
+  onTimeStepChange,
 }: Props) {
   const { view, setView, zoom } = viewport
+  const modeName = t(modeLabels[timeMode])
+  const step = stepFor(timeDisplay, timeMode)
   return (
     <div className="tl-toolbar">
       <div className="tl-toolbar-group">
-        <span className="tl-toolbar-title">
-          {t('timeline.tracks')} <span>{tracks.length.toString().padStart(2, '0')}</span>
-        </span>
-        <span className="tl-divider" />
         <button
           className={`tl-tool ${tool === 'select' ? 'is-active' : ''}`}
           title={t('tools.selectTitle')}
@@ -76,16 +95,6 @@ export default function TimelineToolbar({
           onClick={() => onToolChange('select')}
         >
           <MousePointer2 size={15} />
-        </button>
-        <button
-          className={`tl-tool ${tool === 'split' ? 'is-active' : ''}`}
-          title={t('tools.splitTitle')}
-          aria-label={t('tools.splitClip')}
-          aria-pressed={tool === 'split'}
-          onClick={() => onToolChange('split')}
-          disabled={recording}
-        >
-          <Scissors size={15} />
         </button>
         <button
           className={`tl-tool ${tool === 'script' ? 'is-active' : ''}`}
@@ -97,26 +106,16 @@ export default function TimelineToolbar({
         >
           <TextCursorInput size={15} />
         </button>
+      </div>
+      <div className="tl-toolbar-group">
         <button
           className="tl-tool"
           title={t('tools.splitAtPlayheadTitle')}
           aria-label={t('tools.splitAtPlayhead')}
-          disabled={!canDelete}
-          onClick={() => {
-            if (selectedTrack && selectedClipId)
-              onSplitClip(selectedTrack.id, selectedClipId, position)
-          }}
+          disabled={!canSplit}
+          onClick={onSplitAtPlayhead}
         >
-          <Scissors size={12} />
-        </button>
-        <button
-          className={`tl-tool ${snapping ? 'is-active' : ''}`}
-          title={`${t('tools.snap')} · ${snapping ? t('common.on') : t('common.off')}`}
-          aria-label={t('tools.snap')}
-          aria-pressed={snapping}
-          onClick={() => onSnappingChange(!snapping)}
-        >
-          <Magnet size={15} />
+          <Scissors size={14} />
         </button>
         <button
           className="tl-tool"
@@ -149,6 +148,51 @@ export default function TimelineToolbar({
         </button>
       </div>
       {transport}
+      <span className="tl-toolbar-spacer" />
+      <div className="tl-toolbar-group">
+        <button
+          className="tl-time-mode"
+          title={
+            frameRate
+              ? t('timeDisplay.cycleTitle', { mode: modeName })
+              : t('timeDisplay.needsVideo')
+          }
+          aria-label={t('timeDisplay.cycleTitle', { mode: modeName })}
+          disabled={!frameRate || operationPending}
+          onClick={onCycleTimeMode}
+        >
+          {modeName}
+        </button>
+        <select
+          className="tl-step"
+          title={t('timeDisplay.stepTitle')}
+          aria-label={t('timeDisplay.step')}
+          value={step}
+          disabled={operationPending}
+          onChange={(event) => {
+            onTimeStepChange(Number(event.target.value))
+            event.currentTarget.blur()
+          }}
+        >
+          {stepOptions(timeMode).map((option) => (
+            <option key={option} value={option}>
+              {stepLabel(timeMode, option)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="tl-toolbar-group">
+        <button
+          className={`tl-tool ${snapping ? 'is-active' : ''}`}
+          title={`${t('tools.snap')} · ${snapping ? t('common.on') : t('common.off')}`}
+          aria-label={t('tools.snap')}
+          aria-pressed={snapping}
+          onClick={() => onSnappingChange(!snapping)}
+        >
+          <Magnet size={15} />
+        </button>
+        {monitor}
+      </div>
       <div className="tl-toolbar-group">
         <span className="tl-zoom-label">
           {view.span < 60
@@ -182,7 +226,8 @@ export default function TimelineToolbar({
         >
           <Maximize2 size={14} />
         </button>
-        <span className="tl-divider" />
+      </div>
+      <div className="tl-toolbar-group">
         <button className="tl-add-track" onClick={onAddTrack} disabled={recording}>
           <Plus size={14} /> {t('timeline.addTrack')}{' '}
         </button>

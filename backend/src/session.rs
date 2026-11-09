@@ -123,6 +123,7 @@ impl AudioSession {
             sample_rate: SAMPLE_RATE,
             waveform: recording.peaks.bins,
             peak_frames: recording.peaks.width,
+            frame_rate: None,
         };
         let mut project = store.project.clone();
         project

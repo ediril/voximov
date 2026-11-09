@@ -1,4 +1,7 @@
-use crate::{commands, i18n, storage::Store};
+use crate::{
+    commands, i18n,
+    storage::{Store, TimeDisplay, TimeMode},
+};
 use anyhow::Result;
 use serde_json::json;
 use std::fs;
@@ -181,5 +184,115 @@ fn audio_devices_persist_without_editing_projects_or_interrupting_transport() ->
     let recovered = Store::open(configuration, None)?;
     assert!(recovered.config.input_device.is_empty());
     assert!(recovered.config.output_device.is_empty());
+    Ok(())
+}
+
+#[test]
+fn time_display_persists_per_mode_steps_without_editing_projects() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let configuration = directory.path().join("configuration");
+    let project = directory.path().join("session.voximov");
+    let mut store = Store::open(configuration.clone(), Some(directory.path().join("work")))?;
+    assert_eq!(store.config.time_display, TimeDisplay::default());
+    assert_eq!(
+        serde_json::to_value(store.config.time_display)?,
+        json!({"mode":"time","timeStep":1.0,"framesStep":1,"timecodeStep":1})
+    );
+    store.save(&project)?;
+    let before = fs::read(&project)?;
+    let mut session = crate::session::AudioSession::new();
+    crate::controller::execute(&mut store, &mut session, &json!({"command":"play"}))?;
+    crate::controller::execute(
+        &mut store,
+        &mut session,
+        &json!({"command":"time_preferences_patch","timeDisplay":{"mode":"timecode","timeStep":0.1,"framesStep":30,"timecodeStep":5}}),
+    )?;
+    assert!(session.playing);
+    assert!(!store.config.dirty);
+    assert!(store.history.is_empty());
+    assert_eq!(fs::read(&project)?, before);
+    let expected = TimeDisplay {
+        mode: TimeMode::Timecode,
+        time_step: 0.1,
+        frames_step: 30,
+        timecode_step: 5,
+    };
+    assert_eq!(
+        Store::open(configuration.clone(), None)?
+            .config
+            .time_display,
+        expected
+    );
+    let settings_before = fs::read(configuration.join("settings.json"))?;
+    for invalid in [
+        json!({"mode":"beats","timeStep":1.0,"framesStep":1,"timecodeStep":1}),
+        json!({"mode":"frames","timeStep":0.3,"framesStep":1,"timecodeStep":1}),
+        json!({"mode":"frames","timeStep":1.0,"framesStep":2,"timecodeStep":1}),
+        json!({"mode":"frames","timeStep":1.0,"framesStep":1,"timecodeStep":0}),
+    ] {
+        assert!(
+            commands::execute(
+                &mut store,
+                &json!({"command":"time_preferences_patch","timeDisplay":invalid}),
+            )
+            .is_err()
+        );
+    }
+    assert_eq!(store.config.time_display, expected);
+    assert_eq!(
+        fs::read(configuration.join("settings.json"))?,
+        settings_before
+    );
+    Ok(())
+}
+
+#[test]
+fn old_or_damaged_settings_use_the_default_time_display() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let configuration = directory.path().join("configuration");
+    let store = Store::open(
+        configuration.clone(),
+        Some(directory.path().join("working")),
+    )?;
+    let mut settings = serde_json::to_value(&store.config)?;
+    settings.as_object_mut().unwrap().remove("timeDisplay");
+    fs::write(
+        configuration.join("settings.json"),
+        serde_json::to_vec(&settings)?,
+    )?;
+    assert_eq!(
+        Store::open(configuration.clone(), None)?
+            .config
+            .time_display,
+        TimeDisplay::default()
+    );
+    settings["timeDisplay"] = json!({"mode":"frames","framesStep":10});
+    fs::write(
+        configuration.join("settings.json"),
+        serde_json::to_vec(&settings)?,
+    )?;
+    let partial = Store::open(configuration.clone(), None)?
+        .config
+        .time_display;
+    assert_eq!(partial.mode, TimeMode::Frames);
+    assert_eq!(partial.frames_step, 10);
+    assert_eq!(partial.time_step, 1.);
+    for damaged in [
+        json!({"mode":"frames","timeStep":7.0}),
+        json!({"mode":"beats"}),
+        json!("frames"),
+    ] {
+        settings["timeDisplay"] = damaged;
+        fs::write(
+            configuration.join("settings.json"),
+            serde_json::to_vec(&settings)?,
+        )?;
+        assert_eq!(
+            Store::open(configuration.clone(), None)?
+                .config
+                .time_display,
+            TimeDisplay::default()
+        );
+    }
     Ok(())
 }

@@ -22,6 +22,7 @@ fn setup() -> Result<(tempfile::TempDir, Store)> {
         sample_rate: SAMPLE_RATE,
         waveform: vec![],
         peak_frames: 256,
+        frame_rate: None,
     };
     store.project.tracks[1].clips.push(Clip {
         id: id(),

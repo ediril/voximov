@@ -28,7 +28,6 @@ type Props = Pick<
   | 'position'
   | 'recordStart'
   | 'selection'
-  | 'tool'
   | 'scriptStatus'
   | 'onEditClip'
   | 'onGenerateScripts'
@@ -62,7 +61,6 @@ export default function TimelineTrack({
   assetMap,
   selecting,
   selection,
-  tool: propsTool,
   scriptStatus,
   onEditClip,
   onGenerateScripts,
@@ -183,7 +181,7 @@ export default function TimelineTrack({
               })}
               title={`${soloHint ? `${soloHint}\n` : ''}${description} · ${formatTime(clip.start, true)} — ${formatTime(clip.start + clip.duration, true)}`}
               onPointerDown={(event) => {
-                if ((event.target as Element).closest('[data-trim]') || propsTool === 'split')
+                if ((event.target as Element).closest('[data-trim]'))
                   beginClipDrag(event, track, original)
                 else selecting.beginClipMove(event, track, original)
               }}

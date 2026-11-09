@@ -4,8 +4,8 @@ import { formatTime } from '../types'
 import { clamp, minimumSpan } from './viewport'
 import type { TimelineProps } from './types'
 import type { TimelineViewport } from './useTimelineViewport'
-type Props = Pick<TimelineProps, 'recording' | 'tool'> & { viewport: TimelineViewport }
-export default function TimelineScrollbar({ recording, tool, viewport }: Props) {
+type Props = Pick<TimelineProps, 'recording'> & { viewport: TimelineViewport }
+export default function TimelineScrollbar({ recording, viewport }: Props) {
   const {
     scrollbarRef,
     setView,
@@ -21,11 +21,7 @@ export default function TimelineScrollbar({ recording, tool, viewport }: Props) 
   return (
     <div className="tl-bottom-row">
       <div className="tl-timeline-hint">
-        {recording
-          ? t('timeline.recording')
-          : tool === 'split'
-            ? t('timeline.splitHint')
-            : t('timeline.moveHint')}
+        {recording ? t('timeline.recording') : t('timeline.moveHint')}
       </div>
       <div
         ref={scrollbarRef}

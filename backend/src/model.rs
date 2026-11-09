@@ -170,6 +170,42 @@ impl Track {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FrameRate {
+    pub numerator: u32,
+    pub denominator: u32,
+}
+
+impl FrameRate {
+    pub fn frames_at(&self, position: u64) -> u64 {
+        let scale = SAMPLE_RATE as u128 * self.denominator as u128;
+        ((position as u128 * self.numerator as u128 * 2 + scale) / (scale * 2)) as u64
+    }
+    pub fn seconds(&self, frames: u64) -> f64 {
+        frames as f64 * self.denominator as f64 / self.numerator as f64
+    }
+    pub fn nearest_boundary(&self, seconds: f64) -> f64 {
+        self.seconds(self.frames_at((seconds.max(0.) * SAMPLE_RATE as f64).round() as u64))
+    }
+    pub fn track_timescale(&self) -> u32 {
+        self.numerator * 10_000u32.div_ceil(self.numerator)
+    }
+    pub fn is_valid(&self) -> bool {
+        self.numerator > 0
+            && self.denominator > 0
+            && self.numerator >= self.denominator
+            && self.numerator as u64 <= MAX_FRAMES_PER_SECOND * self.denominator as u64
+    }
+}
+
+impl std::fmt::Display for FrameRate {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}/{}", self.numerator, self.denominator)
+    }
+}
+
+const MAX_FRAMES_PER_SECOND: u64 = 240;
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
@@ -182,6 +218,8 @@ pub struct Asset {
     pub sample_rate: u32,
     pub waveform: Vec<[f32; 2]>,
     pub peak_frames: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_rate: Option<FrameRate>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -217,6 +255,25 @@ impl Project {
             .map(|c| c.start + c.duration)
             .fold(0., f64::max)
     }
+    pub fn frame_rate_asset(&self) -> Option<&Asset> {
+        let track = self.tracks.iter().find(|track| track.kind == "video")?;
+        track
+            .clips
+            .iter()
+            .filter_map(|clip| {
+                let asset_id = clip.asset_id.as_deref()?;
+                let asset = self
+                    .assets
+                    .iter()
+                    .find(|asset| asset.id == asset_id && asset.kind == "video")?;
+                Some((clip.start, asset))
+            })
+            .min_by(|left, right| left.0.total_cmp(&right.0))
+            .map(|(_, asset)| asset)
+    }
+    pub fn frame_rate(&self) -> Option<FrameRate> {
+        self.frame_rate_asset()?.frame_rate
+    }
     pub fn validate(&self) -> Result<()> {
         ensure!(
             [2, 3].contains(&self.version),
@@ -246,7 +303,9 @@ impl Project {
                     && a.duration.is_finite()
                     && a.duration >= 0.
                     && a.frames <= MAX_FRAMES
-                    && a.sample_rate == SAMPLE_RATE,
+                    && a.sample_rate == SAMPLE_RATE
+                    && a.frame_rate
+                        .is_none_or(|rate| a.kind == "video" && rate.is_valid()),
                 crate::i18n::message("error.media")
             );
             ensure!(

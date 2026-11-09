@@ -4,7 +4,7 @@ import Timeline from './Timeline'
 import { useStudio } from './useStudio'
 import StudioHeader from './components/StudioHeader'
 import VideoPreview from './components/VideoPreview'
-import Transport from './components/Transport'
+import Transport, { MonitorButton } from './components/Transport'
 import StatusBar from './components/StatusBar'
 import Inspector from './components/Inspector'
 import HelpDialog from './components/HelpDialog'
@@ -39,6 +39,7 @@ export default function App() {
       </section>
       <Timeline
         transport={<Transport {...studio} />}
+        monitor={<MonitorButton {...studio} />}
         tracks={studio.tracks}
         assets={studio.assets}
         selectedTrackId={studio.selectedTrackId}
@@ -53,7 +54,13 @@ export default function App() {
         onSelectClip={studio.setSelectedClipId}
         onUpdateTrack={studio.updateTrack}
         onEditClip={studio.editClip}
-        onSplitClip={studio.splitClip}
+        canSplit={studio.canSplit}
+        onSplitAtPlayhead={studio.splitAtPlayhead}
+        timeDisplay={studio.timeDisplay}
+        timeMode={studio.timeMode}
+        frameRate={studio.frameRate}
+        onCycleTimeMode={studio.cycleTimeMode}
+        onTimeStepChange={studio.changeTimeStep}
         onSeek={studio.seek}
         position={studio.position}
         duration={studio.duration}

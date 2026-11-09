@@ -307,6 +307,7 @@ fn matroska_without_audio_has_a_video_clip_and_silent_export() -> Result<()> {
         sample_rate: SAMPLE_RATE,
         waveform: vec![],
         peak_frames: 256,
+        frame_rate: None,
     };
     assert_eq!(
         media::decode(&export, &directory.path().join("silent.pcm"), asset)?.duration,

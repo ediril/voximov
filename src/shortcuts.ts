@@ -9,6 +9,9 @@ type Shortcut =
   | 'home'
   | 'select'
   | 'split'
+  | 'timeMode'
+  | 'stepBack'
+  | 'stepForward'
   | 'zoomIn'
   | 'zoomOut'
   | 'copy'
@@ -31,13 +34,18 @@ export function shortcutFor(
     Space: 'play',
     KeyR: 'record',
     KeyV: 'select',
-    KeyX: 'split',
+    KeyS: 'split',
+    KeyT: 'timeMode',
+    ArrowLeft: 'stepBack',
+    ArrowRight: 'stepForward',
     Delete: 'delete',
     Backspace: 'delete',
     Home: 'home',
   }
   return shortcuts[event.code] ?? null
 }
+
+export const repeatableShortcuts: readonly Shortcut[] = ['stepBack', 'stepForward']
 
 const textEntrySelector = 'input,textarea,select,[contenteditable=true],[role="dialog"]'
 const activatableSelector = 'button,a[href],summary'

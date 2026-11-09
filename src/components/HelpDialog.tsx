@@ -50,8 +50,16 @@ export default function HelpDialog({ setHelp }: Props) {
             {t('tools.select')}{' '}
           </span>
           <span>
-            <kbd>X</kbd>
-            {t('tools.split')}{' '}
+            <kbd>S</kbd>
+            {t('tools.splitAtPlayhead')}
+          </span>
+          <span>
+            <kbd>← →</kbd>
+            {t('help.stepShortcut')}
+          </span>
+          <span>
+            <kbd>T</kbd>
+            {t('help.timeModeShortcut')}
           </span>
           <span>
             <kbd>Delete</kbd>

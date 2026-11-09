@@ -336,6 +336,7 @@ mod tests {
             sample_rate: SAMPLE_RATE,
             waveform: vec![[0., 0.]],
             peak_frames: 1,
+            frame_rate: None,
         };
         let mut file = OpenOptions::new()
             .read(true)

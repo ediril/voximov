@@ -96,18 +96,11 @@ export default function MixerPanel({
               <span>R</span>
             </div>
             <div className="track-exports">
-              <span>{t('mixer.exportTrack')}</span>
               <button
                 disabled={!track.clips.length || recording || !!busy}
                 onClick={() => void exportAudio(track.id)}
               >
-                WAV
-              </button>
-              <button
-                disabled={!track.clips.length || recording || !!busy}
-                onClick={() => void exportAudio(track.id, 'mp3')}
-              >
-                MP3
+                {t('export.track')}
               </button>
               <button
                 className="track-delete"

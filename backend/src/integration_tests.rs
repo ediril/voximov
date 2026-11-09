@@ -26,11 +26,7 @@ fn native_media_edit_save_playback_and_export_roundtrip() -> Result<()> {
     )?;
     assert!((store.project.duration() - 6.).abs() < 0.1);
     let track_id = store.project.tracks[0].id.clone();
-    let clip_id = store.project.tracks[0].clips[0].id.clone();
-    commands::execute(
-        &mut store,
-        &json!({"command":"clip_split","trackId":track_id,"clipId":clip_id,"position":2.}),
-    )?;
+    commands::execute(&mut store, &json!({"command":"split_at","position":2.}))?;
     assert_eq!(store.project.tracks[0].clips.len(), 2);
     commands::execute(
         &mut store,
@@ -58,6 +54,7 @@ fn native_media_edit_save_playback_and_export_roundtrip() -> Result<()> {
             sample_rate: SAMPLE_RATE,
             waveform: vec![],
             peak_frames: 256,
+            frame_rate: None,
         };
         let decoded = media::decode(&source, &temporary.path().join("check.pcm"), asset)?;
         assert!((decoded.duration - store.project.duration()).abs() < 0.15);
@@ -127,6 +124,13 @@ fn fixture_store() -> Result<(tempfile::TempDir, Store)> {
         0.,
     )?;
     Ok((temporary, store))
+}
+
+fn forget_frame_rates(store: &mut Store) {
+    for asset in &mut store.project.assets {
+        asset.frame_rate = None;
+        store.probed_frame_rates.insert(asset.id.clone());
+    }
 }
 
 #[test]
@@ -370,7 +374,7 @@ fn mute_and_solo_only_affect_mix_and_not_individual_export() -> Result<()> {
     let destination = temporary.path().join("muted-track.wav");
     commands::execute(
         &mut store,
-        &json!({"command":"export","trackId":track_id,"format":"wav","path":destination}),
+        &json!({"command":"export","trackId":track_id,"path":destination}),
     )?;
     assert!(std::fs::metadata(destination)?.len() > 10000);
     Ok(())
@@ -379,13 +383,11 @@ fn mute_and_solo_only_affect_mix_and_not_individual_export() -> Result<()> {
 #[test]
 fn cuts_are_sample_exact_and_save_clears_both_histories() -> Result<()> {
     let (temporary, mut store) = fixture_store()?;
+    forget_frame_rates(&mut store);
     let track = store.project.tracks[0].id.clone();
     let clip = store.project.tracks[0].clips[0].id.clone();
     let cut = 0.0123456;
-    commands::execute(
-        &mut store,
-        &json!({"command":"clip_split","trackId":track,"clipId":clip,"position":cut}),
-    )?;
+    commands::execute(&mut store, &json!({"command":"split_at","position":cut}))?;
     let expected = (cut * SAMPLE_RATE as f64).round() / SAMPLE_RATE as f64;
     assert_eq!(store.project.tracks[0].clips[1].start, expected);
     assert_eq!(store.project.tracks[0].clips[1].offset, expected);
@@ -432,5 +434,36 @@ fn close_guard_preserves_recording_and_discards_only_unsaved_changes() -> Result
     assert!(!store.config.dirty);
     assert_eq!(store.project.tracks[0].volume, 0.);
     assert!(file.exists());
+    Ok(())
+}
+
+#[test]
+fn audio_exports_take_their_format_from_the_chosen_file_name() -> Result<()> {
+    let (temporary, mut store) = fixture_store()?;
+    let export = |store: &mut Store, path: PathBuf| {
+        commands::execute(
+            store,
+            &json!({"command":"export","trackId":null,"path":path}),
+        )
+    };
+    let mp3 = temporary.path().join("Mix.MP3");
+    let result = export(&mut store, mp3.clone())?;
+    assert_eq!(result["format"], "mp3");
+    assert_eq!(result["path"], json!(mp3));
+    let bytes = std::fs::read(&mp3)?;
+    assert!(bytes.starts_with(b"ID3") || (bytes[0] == 0xff && bytes[1] & 0xe0 == 0xe0));
+    let unnamed = temporary.path().join("Mix");
+    let result = export(&mut store, unnamed.clone())?;
+    assert_eq!(result["format"], "wav");
+    assert_eq!(result["path"], json!(temporary.path().join("Mix.wav")));
+    assert!(std::fs::read(temporary.path().join("Mix.wav"))?.starts_with(b"RIFF"));
+    assert!(!unnamed.exists());
+    let (path, format) = commands::audio_destination(PathBuf::from("/exports/take.final"));
+    assert_eq!(
+        (path, format),
+        (PathBuf::from("/exports/take.final.wav"), "wav")
+    );
+    let (path, format) = commands::audio_destination(PathBuf::from("/exports/take.wav"));
+    assert_eq!((path, format), (PathBuf::from("/exports/take.wav"), "wav"));
     Ok(())
 }

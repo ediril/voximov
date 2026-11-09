@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { isTauri } from '@tauri-apps/api/core'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu'
-import { Download } from 'lucide-react'
+import { Share } from 'lucide-react'
 import { t } from '../i18n'
 import type { StudioController } from '../useStudio'
 
@@ -62,14 +62,8 @@ export default function ExportButton({
         keep(await PredefinedMenuItem.new({ item: 'Separator' })),
         keep(
           await MenuItem.new({
-            text: t('export.mixWav'),
-            action: () => void actions.current.exportAudio(null, 'wav'),
-          }),
-        ),
-        keep(
-          await MenuItem.new({
-            text: t('export.mixMp3'),
-            action: () => void actions.current.exportAudio(null, 'mp3'),
+            text: t('export.audio'),
+            action: () => void actions.current.exportAudio(null),
           }),
         ),
       ]
@@ -84,14 +78,15 @@ export default function ExportButton({
   }
   return (
     <button
-      className="icon-button export-button"
+      className="play-button export-button"
       aria-label={t('export.button')}
       aria-haspopup="menu"
       title={t('export.button')}
       disabled={disabled}
       onClick={(event) => void open(event.currentTarget)}
     >
-      <Download size={15} />
+      <Share size={14} />
+      <span>{t('export.button')}</span>
     </button>
   )
 }

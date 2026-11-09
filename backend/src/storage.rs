@@ -6,6 +6,7 @@ use crate::{
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashSet,
     fs::{self, File},
     io::{self, Read},
     path::{Path, PathBuf},
@@ -31,6 +32,55 @@ pub struct Config {
     pub speech_url: String,
     #[serde(default = "default_speech_voice")]
     pub speech_voice: String,
+    #[serde(default, deserialize_with = "stored_time_display")]
+    pub time_display: TimeDisplay,
+}
+
+fn stored_time_display<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<TimeDisplay, D::Error> {
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(serde_json::from_value(value).unwrap_or_default())
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TimeMode {
+    #[default]
+    Time,
+    Frames,
+    Timecode,
+}
+
+pub const TIME_STEPS: [f64; 5] = [0.1, 0.5, 1., 5., 10.];
+pub const FRAME_STEPS: [u32; 4] = [1, 5, 10, 30];
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct TimeDisplay {
+    pub mode: TimeMode,
+    pub time_step: f64,
+    pub frames_step: u32,
+    pub timecode_step: u32,
+}
+
+impl Default for TimeDisplay {
+    fn default() -> Self {
+        Self {
+            mode: TimeMode::Time,
+            time_step: 1.,
+            frames_step: 1,
+            timecode_step: 1,
+        }
+    }
+}
+
+impl TimeDisplay {
+    pub fn is_valid(&self) -> bool {
+        TIME_STEPS.contains(&self.time_step)
+            && FRAME_STEPS.contains(&self.frames_step)
+            && FRAME_STEPS.contains(&self.timecode_step)
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -61,6 +111,7 @@ pub struct Store {
     pub progress: Progress,
     pub cancellation: Cancellation,
     pub loudness_cache: Mutex<crate::loudness::LoudnessCache>,
+    pub probed_frame_rates: HashSet<String>,
 }
 
 impl Store {
@@ -82,6 +133,7 @@ impl Store {
                 output_device: String::new(),
                 speech_url: default_speech_url(),
                 speech_voice: default_speech_voice(),
+                time_display: TimeDisplay::default(),
             }
         };
         if let Some(path) = working {
@@ -92,6 +144,9 @@ impl Store {
             && !crate::i18n::LANGUAGES.contains(&config.language.as_str())
         {
             config.language = default_language();
+        }
+        if !config.time_display.is_valid() {
+            config.time_display = TimeDisplay::default();
         }
         ensure!(
             config.working_directory.is_absolute(),
@@ -125,6 +180,7 @@ impl Store {
             progress: Progress::default(),
             cancellation: Cancellation::default(),
             loudness_cache: Mutex::new(Default::default()),
+            probed_frame_rates: HashSet::new(),
         };
         store.persist()?;
         Ok(store)
@@ -139,6 +195,18 @@ impl Store {
         );
         let mut config = self.config.clone();
         config.language = language.into();
+        atomic_json(&self.config_directory.join("settings.json"), &config)
+            .context(crate::i18n::message("error.preferencesSave"))?;
+        self.config = config;
+        Ok(())
+    }
+    pub fn set_time_display(&mut self, time_display: TimeDisplay) -> Result<()> {
+        ensure!(
+            time_display.is_valid(),
+            crate::i18n::message("error.timeDisplay")
+        );
+        let mut config = self.config.clone();
+        config.time_display = time_display;
         atomic_json(&self.config_directory.join("settings.json"), &config)
             .context(crate::i18n::message("error.preferencesSave"))?;
         self.config = config;
@@ -470,6 +538,7 @@ mod tests {
             sample_rate: SAMPLE_RATE,
             waveform: vec![[-0.5, 0.5]],
             peak_frames: 1,
+            frame_rate: None,
         };
         fs::write(store.source(&asset.id), b"wave")?;
         fs::write(store.pcm(&asset.id), [1u8; 8])?;

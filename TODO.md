@@ -63,9 +63,10 @@ Decisions needed:
 
 ## Smaller items
 
+- Use the native macOS traffic-light window buttons (overlay title bar) and hide the custom Windows-style window controls on macOS.
 - Release workflow: build and attach the macOS `.dmg` (on a macOS runner, as `bin/build-macos` does), since macOS is now the primary platform. It currently builds only the Windows executable.
 - Untested: `scripts/kokoro.ps1` on Windows.
 - Script progress is estimated from elapsed time. Kokoro-FastAPI sends each clip's audio in one burst at the end.
 - A webview reload during generation re-enables Play and Record while the engine may still be working.
-- Splitting or partially selecting a script clip still reaches the engine and shows its error instead of being prevented in the UI.
+- Partially selecting a script clip still reaches the engine and shows its error instead of being prevented in the UI.
 - Now possible without sync conflicts: shorten the README inherited from upstream, and move the `bin/` scripts into `scripts/`.

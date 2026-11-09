@@ -1,10 +1,47 @@
 use crate::commands::{number, text};
 use crate::{
-    model::{Clip, MIN_SCRIPT_SLOT, SAMPLE_RATE, Script, Track, id},
+    model::{Clip, MIN_SCRIPT_SLOT, Project, SAMPLE_RATE, Script, Track, id},
     storage::Store,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde_json::Value;
+
+const SAMPLE: f64 = 1. / SAMPLE_RATE as f64;
+const EDGE_TOLERANCE: f64 = 1e-9;
+
+pub fn split_position(project: &Project, position: f64) -> f64 {
+    let snapped = project
+        .frame_rate()
+        .map_or(position, |rate| rate.nearest_boundary(position));
+    (snapped * SAMPLE_RATE as f64).round() / SAMPLE_RATE as f64
+}
+
+fn split_track(track: &mut Track, position: f64) -> bool {
+    let mut split = false;
+    let mut index = 0;
+    while index < track.clips.len() {
+        let original = &track.clips[index];
+        let cut = position - original.start;
+        if original.script.is_none()
+            && cut >= SAMPLE - EDGE_TOLERANCE
+            && original.duration - cut >= SAMPLE - EDGE_TOLERANCE
+        {
+            let tail = Clip {
+                id: id(),
+                start: position,
+                offset: original.offset + cut,
+                duration: original.duration - cut,
+                ..original.clone()
+            };
+            track.clips[index].duration = cut;
+            track.clips.insert(index + 1, tail);
+            split = true;
+            index += 1;
+        }
+        index += 1;
+    }
+    split
+}
 
 pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
     let command = text(value, "command")?;
@@ -118,7 +155,23 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
             });
             store.replace(project)?;
         }
-        "clip_edit" | "clip_split" | "clip_remove" => {
+        "split_at" => {
+            let requested = number(value, "position")?;
+            ensure!(
+                (0. ..=2_000_000.).contains(&requested),
+                crate::i18n::message("error.position")
+            );
+            let mut project = store.project.clone();
+            let position = split_position(&project, requested);
+            let mut split = false;
+            for track in project.tracks.iter_mut().filter(|track| !track.locked) {
+                split |= split_track(track, position);
+            }
+            if split {
+                store.replace(project)?;
+            }
+        }
+        "clip_edit" | "clip_remove" => {
             let mut project = store.project.clone();
             let assets = project.assets.clone();
             let track = project
@@ -134,30 +187,6 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
                 .context(crate::i18n::message("error.clipMissing"))?;
             if command == "clip_remove" {
                 track.clips.remove(index);
-            } else if command == "clip_split" {
-                let original = track.clips[index].clone();
-                ensure!(
-                    original.script.is_none(),
-                    crate::i18n::message("error.scriptClipSplit")
-                );
-                let cut = (number(value, "position")? * SAMPLE_RATE as f64).round()
-                    / SAMPLE_RATE as f64
-                    - original.start;
-                if cut >= 1. / SAMPLE_RATE as f64
-                    && original.duration - cut >= 1. / SAMPLE_RATE as f64
-                {
-                    track.clips[index].duration = cut;
-                    track.clips.insert(
-                        index + 1,
-                        Clip {
-                            id: id(),
-                            start: original.start + cut,
-                            offset: original.offset + cut,
-                            duration: original.duration - cut,
-                            ..original
-                        },
-                    );
-                }
             } else {
                 let clip = &mut track.clips[index];
                 let delta = number(value, "delta")?;

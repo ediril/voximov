@@ -51,7 +51,9 @@ async fn studio_command(
         return Ok(serde_json::json!({}));
     }
     if request["command"] == "export_video_cancel" {
-        state.studio.cancellation.request();
+        if let Some(ticket) = request["ticket"].as_str() {
+            state.studio.cancellation.request(ticket);
+        }
         return Ok(json!({}));
     }
     if let Some(response) = speech_command(&state.studio, &request).await {

@@ -1,7 +1,7 @@
 import { localizedName, t } from '../i18n'
 import { Headphones, Mic, Pause, Play, SkipBack, Square } from 'lucide-react'
-import { formatTime } from '../types'
 import type { StudioController } from '../useStudio'
+import { formatPosition } from '../timeline/timeDisplay'
 import ExportButton from './ExportButton'
 
 type Props = Pick<
@@ -9,8 +9,6 @@ type Props = Pick<
   | 'position'
   | 'playing'
   | 'recording'
-  | 'monitor'
-  | 'setMonitor'
   | 'busy'
   | 'duration'
   | 'armedTrack'
@@ -23,14 +21,14 @@ type Props = Pick<
   | 'exportAudio'
   | 'exportVideo'
   | 'canExportVideo'
+  | 'timeMode'
+  | 'frameRate'
 >
 
 export default function Transport({
   position,
   playing,
   recording,
-  monitor,
-  setMonitor,
   busy,
   duration,
   armedTrack,
@@ -43,11 +41,13 @@ export default function Transport({
   exportAudio,
   exportVideo,
   canExportVideo,
+  timeMode,
+  frameRate,
 }: Props) {
   const waiting = generating && !playing && !recording
   return (
-    <section className="transport" aria-label={t('transport.controls')}>
-      <div className="transport-controls">
+    <div className="transport" role="group" aria-label={t('transport.controls')}>
+      <div className="tl-toolbar-group">
         <button
           className="icon-button"
           title={t('transport.homeTitle')}
@@ -82,6 +82,12 @@ export default function Transport({
         >
           <Square size={12} fill="currentColor" />
         </button>
+        <span className="time-display">
+          {formatPosition(position, timeMode, frameRate)}
+          <span>/ {formatPosition(duration, timeMode, frameRate)}</span>
+        </span>
+      </div>
+      <div className="tl-toolbar-group">
         <button
           className={`record-button ${recording ? 'recording' : ''}`}
           aria-label={recording ? t('transport.stopRecording') : t('transport.record')}
@@ -95,29 +101,6 @@ export default function Transport({
         >
           <span className="record-circle" />
         </button>
-        <button
-          className={`icon-button monitor-button ${monitor ? 'enabled' : ''}`}
-          aria-label={t('transport.monitor')}
-          aria-pressed={monitor}
-          title={t('transport.monitorTitle')}
-          onClick={() => setMonitor(!monitor)}
-        >
-          <Headphones size={15} />
-        </button>
-        <ExportButton
-          exportAudio={exportAudio}
-          exportVideo={exportVideo}
-          canExportVideo={canExportVideo}
-          busy={busy}
-          recording={recording}
-          duration={duration}
-        />
-      </div>
-      <div className="transport-readout">
-        <span className="time-display">
-          {formatTime(position, true)}
-          <span>/ {formatTime(duration, true)}</span>
-        </span>
         <span
           className="record-target"
           title={armedTrack ? localizedName(armedTrack.name) : t('transport.armHint')}
@@ -128,6 +111,33 @@ export default function Transport({
           </span>
         </span>
       </div>
-    </section>
+      <div className="tl-toolbar-group">
+        <ExportButton
+          exportAudio={exportAudio}
+          exportVideo={exportVideo}
+          canExportVideo={canExportVideo}
+          busy={busy}
+          recording={recording}
+          duration={duration}
+        />
+      </div>
+    </div>
+  )
+}
+
+export function MonitorButton({
+  monitor,
+  setMonitor,
+}: Pick<StudioController, 'monitor' | 'setMonitor'>) {
+  return (
+    <button
+      className={`tl-tool ${monitor ? 'is-active' : ''}`}
+      aria-label={t('transport.monitor')}
+      aria-pressed={monitor}
+      title={t('transport.monitorTitle')}
+      onClick={() => setMonitor(!monitor)}
+    >
+      <Headphones size={15} />
+    </button>
   )
 }

@@ -2,11 +2,11 @@ use crate::{
     cancellation::{Cancellation, Cancelled},
     ffmpeg::{self, Tool},
     mixer::Mixer,
-    model::{Asset, Clip, Project, SAMPLE_RATE, Track, id},
+    model::{Asset, Clip, FrameRate, Project, SAMPLE_RATE, Track, id},
     progress::Progress,
     storage::Store,
     video_export::{
-        FrameRate, SEGMENTS_PER_BATCH, VideoExportPlan, VideoFormat, VideoInput, VideoSegment,
+        SEGMENTS_PER_BATCH, VideoExportPlan, VideoFormat, VideoInput, VideoSegment, append,
         batch_arguments, batches, bitrate, filter_graph, has_video, mux_arguments, plan,
     },
 };
@@ -19,6 +19,7 @@ use std::{
 };
 
 const RATE: u64 = SAMPLE_RATE as u64;
+const TICKET: &str = "export-1";
 const FULL_HD: VideoFormat = VideoFormat {
     width: 1920,
     height: 1080,
@@ -39,6 +40,7 @@ fn asset(kind: &str, duration: f64) -> Asset {
         sample_rate: SAMPLE_RATE,
         waveform: vec![],
         peak_frames: 256,
+        frame_rate: None,
     }
 }
 
@@ -666,7 +668,7 @@ fn cancel_after(cancellation: &Cancellation, delay: Duration) {
     let cancellation = cancellation.clone();
     std::thread::spawn(move || {
         std::thread::sleep(delay);
-        cancellation.request();
+        cancellation.request(TICKET);
     });
 }
 
@@ -674,7 +676,7 @@ fn cancel_after(cancellation: &Cancellation, delay: Duration) {
 #[test]
 fn cancelling_stops_a_running_tool_without_waiting_for_it() {
     let cancellation = Cancellation::default();
-    let _operation = cancellation.begin();
+    let _operation = cancellation.begin(TICKET);
     cancel_after(&cancellation, Duration::from_millis(200));
     let started = Instant::now();
     let error = ffmpeg::run(
@@ -698,7 +700,7 @@ fn a_stalled_probe_can_be_cancelled_and_times_out() -> Result<()> {
     std::fs::write(&stalled, "#!/bin/sh\nsleep 30\n")?;
     std::fs::set_permissions(&stalled, std::fs::Permissions::from_mode(0o755))?;
     let cancellation = Cancellation::default();
-    let _operation = cancellation.begin();
+    let _operation = cancellation.begin(TICKET);
     cancel_after(&cancellation, Duration::from_millis(200));
     let started = Instant::now();
     let error =
@@ -719,18 +721,76 @@ fn a_stalled_probe_can_be_cancelled_and_times_out() -> Result<()> {
 }
 
 #[test]
-fn cancel_requests_only_reach_a_running_export() {
+fn cancel_requests_reach_only_their_own_export() {
     let cancellation = Cancellation::default();
-    cancellation.request();
+    let operation = cancellation.begin(TICKET);
+    cancellation.request("another export");
     assert!(!cancellation.requested());
-    let operation = cancellation.begin();
-    cancellation.request();
+    cancellation.request(TICKET);
     assert!(cancellation.requested());
     assert!(cancellation.check().unwrap_err().is::<Cancelled>());
     drop(operation);
     assert!(!cancellation.requested());
-    cancellation.request();
+    cancellation.request(TICKET);
+    let next = cancellation.begin("next export");
     assert!(cancellation.check().is_ok());
+    drop(next);
+}
+
+#[test]
+fn a_cancel_sent_before_the_export_starts_stops_it_when_it_begins() {
+    let cancellation = Cancellation::default();
+    cancellation.request(TICKET);
+    assert!(!cancellation.requested());
+    let operation = cancellation.begin(TICKET);
+    assert!(cancellation.check().unwrap_err().is::<Cancelled>());
+    drop(operation);
+    let retried = cancellation.begin(TICKET);
+    assert!(cancellation.check().is_ok());
+    drop(retried);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn an_early_cancel_makes_the_export_command_report_cancelled() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let mut store = Store::open(
+        directory.path().join("config"),
+        Some(directory.path().join("work")),
+    )?;
+    let video = asset("video", 4.);
+    std::fs::write(store.source(&video.id), b"video")?;
+    store.project.tracks[0].clips.push(clip(&video, 0., 0., 4.));
+    store.project.assets.push(video);
+    store.cancellation.request(TICKET);
+    let destination = directory.path().join("cancelled.mp4");
+    let result = crate::commands::execute(
+        &mut store,
+        &serde_json::json!({"command":"export_video","path":destination,"ticket":TICKET}),
+    )?;
+    assert_eq!(result, serde_json::json!({"saved":false,"cancelled":true}));
+    assert!(!destination.exists());
+    assert!(!store.cancellation.requested());
+    Ok(())
+}
+
+#[test]
+fn joining_batches_stops_between_chunks_when_cancelled() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let source = directory.path().join("batch.h264");
+    std::fs::write(&source, vec![7u8; 3 << 20])?;
+    let idle = Cancellation::default();
+    let mut joined = Vec::new();
+    append(&source, &mut joined, &idle)?;
+    assert_eq!(joined.len(), 3 << 20);
+    let cancellation = Cancellation::default();
+    let _operation = cancellation.begin(TICKET);
+    cancellation.request(TICKET);
+    let mut partial = Vec::new();
+    let error = append(&source, &mut partial, &cancellation).unwrap_err();
+    assert!(error.is::<Cancelled>());
+    assert!(partial.is_empty());
+    Ok(())
 }
 
 #[test]
@@ -747,8 +807,8 @@ fn loudness_analysis_stops_when_the_export_is_cancelled() -> Result<()> {
         .push(clip(&voice, 0., 0., 10.));
     store.project.assets.push(voice);
     assert!(store.project.tracks[1].effects.normalize && !store.project.tracks[1].fx_bypass);
-    let operation = store.cancellation.begin();
-    store.cancellation.request();
+    let operation = store.cancellation.begin(TICKET);
+    store.cancellation.request(TICKET);
     let error = Mixer::with_selection(&store, None, None).err().unwrap();
     assert!(error.is::<Cancelled>());
     drop(operation);

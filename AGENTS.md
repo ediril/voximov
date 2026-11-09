@@ -1,12 +1,13 @@
 # Project instructions
 
 - React and TypeScript components live in `src/components`; timeline behavior lives in `src/timeline`. Hooks coordinate transport and desktop lifecycle through `StudioClient` and Tauri IPC. Rust in `backend/src` owns decoding, DSP, project storage, and editing; WebSocket carries binary audio only.
-- Run `npm test` for TypeScript unit tests and Rust integration tests. Validate changes with `npm run build`, `npm run format:check`, `npm run lint`, and `cargo fmt --manifest-path backend/Cargo.toml --check`. Add meaningful tests for storage, protocol, and localization changes.
+- Run `npm test` for TypeScript unit tests and Rust integration tests. Validate changes with `npm run build`, `npm run format:check`, `npm run lint`, and `cargo fmt --manifest-path backend/Cargo.toml --check`. Add meaningful tests for storage, protocol, and localization changes. Add tests only for behavior that could realistically break and that a user or caller would notice; do not add tests that restate constants or implementation details.
 - Keep all user-facing text in `src/locales`. English is the complete fallback catalog. Update every supported language and preserve interpolation parameters whenever translations change. Keep documentation in English.
 - Do not add code comments. Use clear names and focused functions.
 - Treat Voximov as a macOS-only app for new features; macOS-only implementations such as AVFoundation are fine. Do not remove existing Windows code or builds.
 - macOS is the primary platform: build the app and dmg with `bin/build-macos`. Keep the Windows EXE while it stays low-maintenance. Linux is not supported. Keep the application version synchronized in npm, Cargo, their lockfiles, and Tauri. Store all builds in `build/`, keep Cargo intermediates in `build/.cache/`, replace repeated builds of the same version, and remove obsolete builds and backup copies. Keep generated binaries out of commits.
 - When the user authorizes committing a new application version, also create an annotated Git tag named `v<version>` pointing to that release commit. Never commit or create tags during build-only work, and never move or reuse an existing release tag. Push commits or tags and publish GitHub Releases only when explicitly authorized.
 - Work directly in this checkout so the user can see changes as they happen. Do not use separate git worktrees or copies of the repository.
+- Do implementation work yourself in the main session. Do not delegate building or editing to subagents; a separate read-only reviewer is fine for large or risky changes.
 - Do not add `Co-Authored-By` or other attribution lines to commit messages.
 - Keep all persistent instructions and working agreements in this file. Do not keep separate notes in agent memory; the agent memory file is a link to this file.
