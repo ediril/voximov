@@ -1,17 +1,16 @@
-# simpleVoiceover
+# Voximov
 
-simpleVoiceover is a desktop app for recording and editing a voiceover over a video. Video audio,
+Voximov is a desktop app for recording and editing a voiceover over a video. Video audio,
 your voice and music each sit on their own track, so you can cut, move and process them without
-touching the originals. A Rust engine decodes, processes, mixes and exports all audio itself, with
-no FFmpeg or other external tools. Everything runs locally on your computer.
+touching the originals. A Rust engine decodes, processes, mixes and exports all audio itself, with no FFmpeg or other external tools. Everything runs locally on your computer.
 
 ## Who is it for?
 
-simpleVoiceover is for people who narrate their own videos: tutorials, game footage, product
+Voximov is for people who narrate their own videos: tutorials, game footage, product
 demos, or anything else that needs a voice on top of the picture.
 
 If your current process is "record in one app, line it up in another, and hope the levels match,"
-simpleVoiceover keeps recording, editing and export in one window.
+Voximov keeps recording, editing and export in one window.
 
 It works best for a single narrator and a finished video. It is not a full video editor; export
 produces audio, and the original video stays untouched.
@@ -27,7 +26,8 @@ produces audio, and the original video stays untouched.
 - Video preview for H.264 MP4 and Matroska, with one track per audio stream.
 - Export a single track or the whole mix as WAV or MP3.
 - AI voiceover from a written script with Kokoro, running locally.
-- One project file (`.justspeak`) that holds sources, takes and edits, with crash-safe saves.
+- One project file (`.voximov`) that holds sources, takes and edits, with crash-safe saves.
+  Projects saved as `.justspeak` files by earlier versions still open.
 - 13 interface languages.
 
 ## Installation
@@ -71,7 +71,7 @@ GitHub-hosted runners. The app needs the WebView2 Runtime.
 
 ## AI voiceover
 
-simpleVoiceover can turn a written script into speech with
+Voximov can turn a written script into speech with
 [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), an open-source voice model. The app talks to
 [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI), a server that runs in Docker on your
 own computer, so your script stays on your machine.
@@ -121,7 +121,7 @@ On macOS, <kbd>Cmd</kbd> works in place of <kbd>Ctrl</kbd> except for wheel zoom
 
 ## License
 
-simpleVoiceover is source-available under the [PolyForm Strict License 1.0.0](LICENSE). Use is
+Voximov is source-available under the [PolyForm Strict License 1.0.0](LICENSE). Use is
 free of charge for the purposes permitted by that license, including:
 
 - Any noncommercial purpose.
@@ -131,14 +131,14 @@ free of charge for the purposes permitted by that license, including:
   safety or health organizations, environmental protection organizations, and government
   institutions, regardless of funding source or obligations resulting from funding.
 
-This license grants no rights to modify or redistribute simpleVoiceover or create works based on
+This license grants no rights to modify or redistribute Voximov or create works based on
 it. The full license governs; this summary does not grant additional permissions.
 
 Commercial use outside those permissions requires a separate paid license. Contact
 [Emrah Diril](mailto:emrah@diril.org) for pricing and a commercial agreement before beginning such
 use.
 
-simpleVoiceover is based on simpleVoiceover by Arcon, used under the MIT License; that notice is in
+Voximov is based on simpleVoiceover by Arcon, used under the MIT License; that notice is in
 [`NOTICE`](NOTICE).
 
 ## Development

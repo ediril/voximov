@@ -18,10 +18,10 @@ cargo xwin build --manifest-path backend/Cargo.toml --target x86_64-pc-windows-m
 output_directory="$project_directory/build"
 mkdir -p "$output_directory"
 application_version="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"
-output_file="$output_directory/simpleVoiceover-v$application_version.exe"
-temporary_file="$(mktemp "$output_directory/.simplevoiceover-windows.XXXXXX")"
+output_file="$output_directory/Voximov-v$application_version.exe"
+temporary_file="$(mktemp "$output_directory/.voximov-windows.XXXXXX")"
 trap 'rm -f -- "$temporary_file"' EXIT
-cp "$output_directory/.cache/x86_64-pc-windows-msvc/release/simpleVoiceover.exe" "$temporary_file"
+cp "$output_directory/.cache/x86_64-pc-windows-msvc/release/Voximov.exe" "$temporary_file"
 chmod 755 "$temporary_file"
 mv -f -- "$temporary_file" "$output_file"
 printf 'Built: %s\n' "$output_file"

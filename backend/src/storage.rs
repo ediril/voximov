@@ -68,7 +68,7 @@ impl Store {
             serde_json::from_reader(File::open(config_file)?)?
         } else {
             Config {
-                working_directory: std::env::temp_dir().join("simpleVoiceover"),
+                working_directory: std::env::temp_dir().join("voximov"),
                 active_project: project.id.clone(),
                 project_file: None,
                 dirty: true,
@@ -335,11 +335,7 @@ impl Store {
         self.redo.clear();
         self.persist()?;
         ensure!(
-            old_root
-                .file_name()
-                .and_then(|x| x.to_str())
-                .is_some_and(|x| x == self.project.id
-                    || x == format!(".simpleVoiceover-{}", self.project.id)),
+            is_project_root(&old_root, &self.project.id),
             crate::i18n::message("error.cachePath")
         );
         if old_root.exists() {
@@ -379,10 +375,7 @@ impl Store {
             self.persist()?;
         }
         ensure!(
-            old_root
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name == old_id || name == format!(".simpleVoiceover-{old_id}")),
+            is_project_root(&old_root, &old_id),
             crate::i18n::message("error.cachePath")
         );
         if old_root.exists() {
@@ -392,14 +385,35 @@ impl Store {
     }
 }
 
+const PROJECT_CACHE_PREFIX: &str = ".voximov-";
+const LEGACY_PROJECT_CACHE_PREFIX: &str = ".simpleVoiceover-";
+
 fn project_root(config: &Config) -> PathBuf {
     if let Some(file) = &config.project_file {
-        file.parent()
-            .unwrap()
-            .join(format!(".simpleVoiceover-{}", config.active_project))
+        let parent = file.parent().unwrap();
+        let legacy = parent.join(format!(
+            "{LEGACY_PROJECT_CACHE_PREFIX}{}",
+            config.active_project
+        ));
+        if legacy.exists() {
+            legacy
+        } else {
+            parent.join(format!("{PROJECT_CACHE_PREFIX}{}", config.active_project))
+        }
     } else {
         config.working_directory.join(&config.active_project)
     }
+}
+
+fn is_project_root(root: &Path, project_id: &str) -> bool {
+    root.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            name == project_id
+                || [PROJECT_CACHE_PREFIX, LEGACY_PROJECT_CACHE_PREFIX]
+                    .iter()
+                    .any(|prefix| name.strip_prefix(prefix) == Some(project_id))
+        })
 }
 
 fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
@@ -460,7 +474,7 @@ mod tests {
         store.change_directory(temp.path().join("chosen"))?;
         assert!(!old.exists());
         assert_eq!(fs::read(store.pcm(&asset.id))?, [1u8; 8]);
-        let saved = temp.path().join("session.justspeak");
+        let saved = temp.path().join("session.voximov");
         store.save(&saved)?;
         assert!(!store.root().exists());
         assert!(!store.config.dirty);

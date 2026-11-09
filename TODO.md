@@ -1,6 +1,6 @@
 # TODO
 
-Open work for simpleVoiceover. This project was detached from arconw/simpleVoiceover on 2026-10-30 and no longer syncs with it.
+Open work for Voximov. This project was detached from arconw/simpleVoiceover on 2026-10-30 and no longer syncs with it.
 
 ## AI voiceover engine fixes
 

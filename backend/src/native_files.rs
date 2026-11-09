@@ -3,6 +3,11 @@ use anyhow::Result;
 use anyhow::bail;
 use std::path::PathBuf;
 
+#[cfg(feature = "desktop")]
+const PROJECT_EXTENSION: &str = "voximov";
+#[cfg(feature = "desktop")]
+const LEGACY_PROJECT_EXTENSION: &str = "justspeak";
+
 pub fn directory(language: &str) -> Result<Option<PathBuf>> {
     #[cfg(feature = "desktop")]
     {
@@ -20,13 +25,16 @@ pub fn directory(language: &str) -> Result<Option<PathBuf>> {
 pub fn project(save: bool, language: &str) -> Result<Option<PathBuf>> {
     #[cfg(feature = "desktop")]
     {
-        let dialog = rfd::FileDialog::new()
-            .add_filter("simpleVoiceover", &["justspeak"])
-            .set_file_name(crate::i18n::text(language, "dialog.projectFilename"));
+        let dialog = rfd::FileDialog::new();
         Ok(if save {
-            dialog.save_file()
+            dialog
+                .add_filter("Voximov", &[PROJECT_EXTENSION])
+                .set_file_name(crate::i18n::text(language, "dialog.projectFilename"))
+                .save_file()
         } else {
-            dialog.pick_file()
+            dialog
+                .add_filter("Voximov", &[PROJECT_EXTENSION, LEGACY_PROJECT_EXTENSION])
+                .pick_file()
         })
     }
     #[cfg(not(feature = "desktop"))]

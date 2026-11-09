@@ -1,4 +1,4 @@
-This project is based on simpleVoiceover by Arcon
+Voximov is based on simpleVoiceover by Arcon
 (https://github.com/arconw/simpleVoiceover), up to and including commit
 3d2ede4, used under the MIT License reproduced below. That includes the
 original interface, audio engine, project storage and editing, and the macOS
@@ -12,7 +12,7 @@ licensed under the PolyForm Strict License 1.0.0 in LICENSE, including:
 - the removal of Linux support and the rewritten documentation
 
 In this repository's history, every commit up to 3d2ede4 comes from the
-original project, and the changes after it are in the commit that follows.
+original project, and the changes after it are in the commits that follow.
 
 MIT License
 

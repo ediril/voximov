@@ -9,11 +9,7 @@ backend/target/
 backend/gen/
 /build/
 .build-tools/
-/simpleVoiceover-v*.exe
-/simpleVoiceover_*.AppImage
-/simpleVoiceover_*.deb
-/simpleVoiceover-*.rpm
-/simple-voiceover-*.rpm
+/Voximov-v*.exe
 .ctx/
 !AGENTS.md
 !CLAUDE.md

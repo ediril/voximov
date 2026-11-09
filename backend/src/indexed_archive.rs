@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn offsets_above_four_gib_remain_seekable() -> Result<()> {
         let temp = tempfile::tempdir()?;
-        let path = temp.path().join("sparse.justspeak");
+        let path = temp.path().join("sparse.voximov");
         let mut project = Project::new();
         let asset = Asset {
             id: crate::model::id(),

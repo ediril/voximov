@@ -8,7 +8,7 @@ fn preferences_persist_without_project_edits_and_survive_project_changes() -> Re
     let directory = tempfile::tempdir()?;
     let configuration = directory.path().join("configuration");
     let working = directory.path().join("working");
-    let project_path = directory.path().join("session.justspeak");
+    let project_path = directory.path().join("session.voximov");
     let mut store = Store::open(configuration.clone(), Some(working))?;
     assert_eq!(store.config.language, "system");
     store.save(&project_path)?;
@@ -67,7 +67,7 @@ fn old_configuration_uses_the_system_language() -> Result<()> {
 fn custom_presets_persist_independently_and_validate_before_writing() -> Result<()> {
     let directory = tempfile::tempdir()?;
     let configuration = directory.path().join("config");
-    let project = directory.path().join("session.justspeak");
+    let project = directory.path().join("session.voximov");
     let mut store = Store::open(configuration.clone(), Some(directory.path().join("work")))?;
     store.save(&project)?;
     let before = fs::read(&project)?;
@@ -106,7 +106,7 @@ fn custom_presets_persist_independently_and_validate_before_writing() -> Result<
 fn native_dialogs_share_complete_catalogs_and_english_fallback() {
     for language in i18n::LANGUAGES {
         assert_ne!(i18n::text(language, "media.add"), "media.add");
-        assert!(i18n::text(language, "dialog.projectFilename").ends_with(".justspeak"));
+        assert!(i18n::text(language, "dialog.projectFilename").ends_with(".voximov"));
     }
     assert_eq!(
         i18n::text("unsupported", "media.add"),
@@ -122,7 +122,7 @@ fn native_dialogs_share_complete_catalogs_and_english_fallback() {
 fn audio_devices_persist_without_editing_projects_or_interrupting_transport() -> Result<()> {
     let directory = tempfile::tempdir()?;
     let configuration = directory.path().join("configuration");
-    let project = directory.path().join("session.justspeak");
+    let project = directory.path().join("session.voximov");
     let mut store = Store::open(configuration.clone(), Some(directory.path().join("work")))?;
     store.save(&project)?;
     let before = fs::read(&project)?;

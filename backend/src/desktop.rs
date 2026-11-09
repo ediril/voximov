@@ -79,7 +79,7 @@ async fn studio_command(
     result.map_err(|e| e.to_string())
 }
 
-const SPEECH_HELP: &str = "https://github.com/ediril/simpleVoiceover#ai-voiceover";
+const SPEECH_HELP: &str = "https://github.com/ediril/voximov#ai-voiceover";
 const SPEECH_COMMANDS: [&str; 4] = [
     "script_generate",
     "script_cancel",
@@ -213,7 +213,7 @@ pub fn run(studio: StudioState, address: &str) -> Result<()> {
                 (area.width, area.height)
             }));
             let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.clone()))
-                .title(format!("simpleVoiceover v{}", env!("CARGO_PKG_VERSION")))
+                .title(format!("Voximov v{}", env!("CARGO_PKG_VERSION")))
                 .decorations(false)
                 .inner_size(width, height)
                 .center()

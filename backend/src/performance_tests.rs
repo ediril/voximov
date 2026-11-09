@@ -38,7 +38,7 @@ fn large_project_import_and_metadata_save() -> Result<()> {
         0.,
     )?;
     let import_ms = start.elapsed().as_secs_f64() * 1000.;
-    let destination = temp.path().join("project.justspeak");
+    let destination = temp.path().join("project.voximov");
     let start = Instant::now();
     store.save(&destination)?;
     let first_save_ms = start.elapsed().as_secs_f64() * 1000.;

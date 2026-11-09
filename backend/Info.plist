@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>simpleVoiceover records voiceovers from your microphone.</string>
+  <string>Voximov records voiceovers from your microphone.</string>
 </dict>
 </plist>

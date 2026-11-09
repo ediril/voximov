@@ -69,7 +69,7 @@ fn draft_script_clip_saves_and_reopens_with_text_and_voice() -> Result<()> {
         &mut store,
         json!({"command":"project_voice","voice":"af_heart"}),
     )?;
-    let file = temporary.path().join("saved").join("script.justspeak");
+    let file = temporary.path().join("saved").join("script.voximov");
     store.save(&file)?;
     let mut reopened = new_store(&temporary.path().join("other"))?;
     reopened.load(&file)?;

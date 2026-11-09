@@ -33,7 +33,7 @@ async fn health(State(state): State<StudioState>) -> impl IntoResponse {
     let store = state.store.try_lock();
     let details=store.ok().map(|store|json!({"workingDirectory":store.config.working_directory,"projectFile":store.config.project_file,"dirty":store.config.dirty}));
     axum::Json(
-        json!({"app":"simpleVoiceover","version":env!("CARGO_PKG_VERSION"),"pid":std::process::id(),"busy":details.is_none(),"project":details}),
+        json!({"app":"Voximov","version":env!("CARGO_PKG_VERSION"),"pid":std::process::id(),"busy":details.is_none(),"project":details}),
     )
 }
 fn same_origin(headers: &HeaderMap) -> bool {

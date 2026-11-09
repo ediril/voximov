@@ -81,7 +81,7 @@ export default function StudioHeader({
         <nav id="project-menu" className="project-menu" aria-label={t('menu.actions')}>
           <div className="menu-brand">
             <AudioLines size={21} />
-            <strong>simpleVoiceover</strong>
+            <strong>Voximov</strong>
           </div>
           <p className="menu-state">
             {snapshot?.config.dirty ? t('project.unsaved') : t('project.saved')}

@@ -32,7 +32,7 @@ pub async fn run() -> Result<()> {
     let log = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(directory.join("simpleVoiceover.log"))?;
+        .open(directory.join("voximov.log"))?;
     tracing_subscriber::fmt()
         .with_target(false)
         .with_ansi(false)
@@ -54,7 +54,7 @@ pub async fn run() -> Result<()> {
             })
             .await
     });
-    tracing::info!("simpleVoiceover started: {address}");
+    tracing::info!("Voximov started: {address}");
     #[cfg(feature = "desktop")]
     if !headless {
         crate::desktop::run(studio.clone(), &address)?;
@@ -71,14 +71,14 @@ pub async fn run() -> Result<()> {
 
 #[cfg(target_os = "macos")]
 fn default_config_directory(home: PathBuf, _local_app_data: Option<PathBuf>) -> PathBuf {
-    home.join(".simpleVoiceover")
+    home.join(".voximov")
 }
 
 #[cfg(not(target_os = "macos"))]
 fn default_config_directory(home: PathBuf, local_app_data: Option<PathBuf>) -> PathBuf {
     local_app_data
         .unwrap_or_else(|| home.join(".local/share"))
-        .join("simpleVoiceover")
+        .join("Voximov")
 }
 
 #[cfg(test)]
@@ -90,7 +90,7 @@ mod tests {
     fn macos_keeps_settings_in_a_hidden_home_folder() {
         assert_eq!(
             default_config_directory(PathBuf::from("/Users/ada"), None),
-            PathBuf::from("/Users/ada/.simpleVoiceover")
+            PathBuf::from("/Users/ada/.voximov")
         );
     }
 
@@ -102,11 +102,11 @@ mod tests {
                 PathBuf::from("/home/ada"),
                 Some(PathBuf::from("C:/Users/ada/AppData/Local"))
             ),
-            PathBuf::from("C:/Users/ada/AppData/Local/simpleVoiceover")
+            PathBuf::from("C:/Users/ada/AppData/Local/Voximov")
         );
         assert_eq!(
             default_config_directory(PathBuf::from("/home/ada"), None),
-            PathBuf::from("/home/ada/.local/share/simpleVoiceover")
+            PathBuf::from("/home/ada/.local/share/Voximov")
         );
     }
 }

@@ -36,7 +36,7 @@ fn native_media_edit_save_playback_and_export_roundtrip() -> Result<()> {
         &mut store,
         &json!({"command":"track_patch","trackId":track_id,"patch":{"volume":-6.,"pan":-0.25}}),
     )?;
-    let file = temporary.path().join("saved").join("session.justspeak");
+    let file = temporary.path().join("saved").join("session.voximov");
     store.save(&file)?;
     assert!(!store.root().exists());
     let mut renderer = mixer::Mixer::new(&store)?;
@@ -91,7 +91,7 @@ fn invalid_edits_never_change_saved_project() -> Result<()> {
         Some(temporary.path().join("work")),
     )?;
     let track_id = store.project.tracks[1].id.clone();
-    let project_file = temporary.path().join("project.justspeak");
+    let project_file = temporary.path().join("project.voximov");
     store.save(&project_file)?;
     assert!(
         commands::execute(
@@ -169,7 +169,7 @@ fn invalid_and_locked_track_removal_preserve_saved_state_and_history() -> Result
         &mut store,
         &json!({"command":"track_patch","trackId":track,"patch":{"locked":true}}),
     )?;
-    store.save(&temporary.path().join("locked.justspeak"))?;
+    store.save(&temporary.path().join("locked.voximov"))?;
     let original = serde_json::to_value(&store.project)?;
     for request in [
         json!({"command":"track_remove","trackId":track}),
@@ -203,7 +203,7 @@ fn removing_the_last_track_can_be_saved_reopened_and_followed_by_adding_a_track(
     assert!(store.project.tracks.is_empty());
     let project_id = store.project.id.clone();
     let asset_id = store.project.assets[0].id.clone();
-    let file = temporary.path().join("empty.justspeak");
+    let file = temporary.path().join("empty.voximov");
     store.save(&file)?;
     drop(store);
     let mut reopened = Store::open(temporary.path().join("config"), None)?;
@@ -401,7 +401,7 @@ fn cuts_are_sample_exact_and_save_clears_both_histories() -> Result<()> {
     assert_eq!(store.project.tracks[0].clips.len(), 2);
     commands::execute(&mut store, &json!({"command":"undo"}))?;
     assert!(!store.history.is_empty() && !store.redo.is_empty());
-    store.save(&temporary.path().join("session.justspeak"))?;
+    store.save(&temporary.path().join("session.voximov"))?;
     assert!(store.history.is_empty() && store.redo.is_empty());
     commands::execute(&mut store, &json!({"command":"undo"}))?;
     commands::execute(&mut store, &json!({"command":"redo"}))?;
@@ -413,7 +413,7 @@ fn cuts_are_sample_exact_and_save_clears_both_histories() -> Result<()> {
 #[test]
 fn close_guard_preserves_recording_and_discards_only_unsaved_changes() -> Result<()> {
     let (temporary, mut store) = fixture_store()?;
-    let file = temporary.path().join("session.justspeak");
+    let file = temporary.path().join("session.voximov");
     store.save(&file)?;
     let track = store.project.tracks[0].id.clone();
     commands::execute(

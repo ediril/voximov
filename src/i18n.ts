@@ -53,7 +53,7 @@ export function setLanguagePreference(value: LanguagePreference) {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = currentLanguage()
     document.documentElement.dir = 'ltr'
-    document.title = 'simpleVoiceover'
+    document.title = 'Voximov'
   }
   listeners.forEach((listener) => listener())
 }

@@ -187,7 +187,7 @@ fn generate(store: &Mutex<Store>, shared: &Shared, job: &Job) -> Result<bool> {
         pcm.len() >= 2,
         crate::i18n::formatted_message("error.speechFailed", &[("detail", "empty".into())])
     );
-    let file = std::env::temp_dir().join(format!("simpleVoiceover-take-{}.wav", id()));
+    let file = std::env::temp_dir().join(format!("voximov-take-{}.wav", id()));
     fs::write(&file, speech::wav(&pcm))?;
     let attached = attach(store, job, &file, &text, &voice);
     let _ = fs::remove_file(&file);

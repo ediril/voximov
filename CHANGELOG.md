@@ -1,8 +1,12 @@
 # Changelog
 
-All notable changes to simpleVoiceover are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
+All notable changes to Voximov are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Changed
+
+- The app is renamed to Voximov. New projects are saved as `.voximov` files, and `.justspeak` projects from earlier versions still open. Settings move to `~/.voximov` on macOS and `%LOCALAPPDATA%\Voximov` on Windows; settings in the old folder are not carried over.
 
 ### Removed
 

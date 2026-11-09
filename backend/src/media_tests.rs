@@ -214,7 +214,7 @@ fn matroska_streams_keep_voice_track_order_independent_exports_and_project_histo
     assert_eq!(serde_json::to_value(&store.project)?, original);
     commands::execute(&mut store, &json!({"command":"redo"}))?;
     assert_eq!(serde_json::to_value(&store.project)?, imported);
-    let project = directory.path().join("streams.svoice");
+    let project = directory.path().join("streams.voximov");
     store.save(&project)?;
     store.load(&project)?;
     let reopened = serde_json::to_value(&store.project)?;
@@ -251,7 +251,7 @@ fn unsupported_matroska_stream_rolls_back_files_project_and_dirty_state() -> Res
         directory.path().join("config"),
         Some(directory.path().join("work")),
     )?;
-    let saved = directory.path().join("saved.svoice");
+    let saved = directory.path().join("saved.voximov");
     store.save(&saved)?;
     let original = fs::read(&saved)?;
     assert!(

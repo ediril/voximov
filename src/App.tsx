@@ -22,7 +22,7 @@ export default function App() {
     return (
       <main className="studio connecting" onContextMenu={(event) => event.preventDefault()}>
         <WindowControls {...studio} />
-        <h1>simpleVoiceover</h1>
+        <h1>Voximov</h1>
         <p>{studio.error ? translateMessage(studio.error) : t('studio.connecting')}</p>
         {studio.confirmMode && <CloseDialog {...studio} />}
       </main>

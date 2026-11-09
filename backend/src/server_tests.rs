@@ -29,7 +29,7 @@ async fn media_ranges_read_directly_from_saved_archive_and_reject_invalid_ranges
         0.,
     )?;
     let asset = store.project.assets[0].id.clone();
-    store.save(&temporary.path().join("session.justspeak"))?;
+    store.save(&temporary.path().join("session.voximov"))?;
     let root = store.root();
     let app = server::router(StudioState::new(store));
     for (range, expected) in [
@@ -91,7 +91,7 @@ async fn video_preview_masks_audio_metadata_across_ranges_without_changing_saved
         0.,
     )?;
     let asset = store.project.assets[0].id.clone();
-    store.save(&temporary.path().join("session.justspeak"))?;
+    store.save(&temporary.path().join("session.voximov"))?;
     let (path, base, length) = store.location(&asset, false)?;
     let patches = crate::video_source::patches(&path, base, length, "video.mp4")?;
     assert!(!patches.is_empty());

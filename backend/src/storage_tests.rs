@@ -47,7 +47,7 @@ fn lazy_overlay_recovers_and_appends_only_new_media() -> Result<()> {
     let mut store = new_store(temp.path())?;
     let asset = import(&mut store, &temp.path().join("one.wav"))?;
     let original = bytes(&store, &asset, false)?;
-    let file = temp.path().join("project.justspeak");
+    let file = temp.path().join("project.voximov");
     store.save(&file)?;
     let location = store.location(&asset, true)?;
     let initial_size = fs::metadata(&file)?.len();
@@ -96,7 +96,7 @@ fn interrupted_append_and_torn_commit_preserve_previous_revision() -> Result<()>
     let temp = tempfile::tempdir()?;
     let mut store = new_store(temp.path())?;
     let asset = import(&mut store, &temp.path().join("voice.wav"))?;
-    let file = temp.path().join("project.justspeak");
+    let file = temp.path().join("project.voximov");
     store.save(&file)?;
     let previous = fs::read(&file)?;
     OpenOptions::new()
@@ -136,7 +136,7 @@ fn failed_save_keeps_committed_media_and_pending_changes() -> Result<()> {
     let temp = tempfile::tempdir()?;
     let mut store = new_store(temp.path())?;
     let asset = import(&mut store, &temp.path().join("one.wav"))?;
-    let file = temp.path().join("project.justspeak");
+    let file = temp.path().join("project.voximov");
     store.save(&file)?;
     let second = import(&mut store, &temp.path().join("two.wav"))?;
     fs::remove_file(store.pcm(&second))?;
@@ -159,7 +159,7 @@ fn removing_media_updates_all_tracks_supports_undo_and_compacts() -> Result<()> 
         &json!({"command":"clip_place","trackId":track,"assetId":asset,"position":2.5}),
     )?;
     assert_eq!(store.project.tracks[1].clips[0].start, 2.5);
-    let file = temp.path().join("project.justspeak");
+    let file = temp.path().join("project.voximov");
     store.save(&file)?;
     commands::execute(
         &mut store,
@@ -235,13 +235,55 @@ fn legacy_zip_migrates_and_save_as_stays_portable() -> Result<()> {
     assert_eq!(bytes(&original, &asset, true)?, pcm);
     original.save(&file)?;
     assert_eq!(Archive::open(&file)?.0.version, 3);
-    let destination = temp.path().join("portable.justspeak");
+    let destination = temp.path().join("portable.voximov");
     original.save_with_options(&destination, true)?;
     fs::remove_file(&file)?;
     let mut portable = new_store(&temp.path().join("other"))?;
     portable.load(&destination)?;
     assert!(!portable.root().exists());
     assert_eq!(bytes(&portable, &asset, true)?, pcm);
+    Ok(())
+}
+
+#[test]
+fn saved_project_cache_uses_new_name_and_recovers_from_old_name() -> Result<()> {
+    let temp = tempfile::tempdir()?;
+    let mut store = new_store(temp.path())?;
+    import(&mut store, &temp.path().join("one.wav"))?;
+    let file = temp.path().join("project.voximov");
+    store.save(&file)?;
+    let track = store.project.tracks[2].id.clone();
+    commands::execute(
+        &mut store,
+        &json!({"command":"track_patch","trackId":track,"patch":{"volume":-3.}}),
+    )?;
+    let second = import(&mut store, &temp.path().join("two.wav"))?;
+    let current = temp.path().join(format!(".voximov-{}", store.project.id));
+    let legacy = temp
+        .path()
+        .join(format!(".simpleVoiceover-{}", store.project.id));
+    assert_eq!(store.root(), current);
+    fs::rename(&current, &legacy)?;
+    drop(store);
+    let mut reopened = Store::open(temp.path().join("config"), None)?;
+    assert!(reopened.config.dirty);
+    assert_eq!(reopened.root(), legacy);
+    assert_eq!(reopened.project.tracks[2].volume, -3.);
+    assert!(reopened.source(&second).exists());
+    reopened.save(&file)?;
+    assert!(!legacy.exists());
+    assert_eq!(Archive::open(&file)?.0.assets.len(), 2);
+    reopened.begin_changes()?;
+    reopened.project.name = "unsaved".into();
+    reopened.persist()?;
+    let legacy = temp
+        .path()
+        .join(format!(".simpleVoiceover-{}", reopened.project.id));
+    fs::rename(reopened.root(), &legacy)?;
+    assert_eq!(reopened.root(), legacy);
+    reopened.discard()?;
+    assert!(!legacy.exists());
+    assert_ne!(reopened.project.name, "unsaved");
     Ok(())
 }
 
