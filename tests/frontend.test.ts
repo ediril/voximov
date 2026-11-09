@@ -36,6 +36,8 @@ describe('studio keyboard', () => {
     expect(key('KeyR')).toBe('record')
     expect(key('KeyV')).toBe('select')
     expect(key('KeyX')).toBe('split')
+    expect(key('Delete')).toBe('delete')
+    expect(key('Backspace')).toBe('delete')
     expect(key('KeyX', true)).toBeNull()
     expect(key('KeyR', false, false, true)).toBeNull()
   })

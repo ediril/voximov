@@ -6,8 +6,8 @@ use crate::{
     progress::Progress,
     storage::Store,
     video_export::{
-        FrameRate, VideoExportPlan, VideoFormat, VideoInput, VideoSegment, batch_arguments,
-        batches, bitrate, filter_graph, has_video, mux_arguments, plan, SEGMENTS_PER_BATCH,
+        FrameRate, SEGMENTS_PER_BATCH, VideoExportPlan, VideoFormat, VideoInput, VideoSegment,
+        batch_arguments, batches, bitrate, filter_graph, has_video, mux_arguments, plan,
     },
 };
 use anyhow::Result;
@@ -396,7 +396,7 @@ fn the_final_step_times_video_by_frame_count_and_adds_the_mix() {
             "-nostats",
             "-f",
             "h264",
-            "-framerate",
+            "-r",
             "30000/1001",
             "-i",
             "/tmp/video.h264",
@@ -487,7 +487,10 @@ fn long_timelines_are_encoded_in_small_batches_with_short_command_lines() {
     for batch in &batches {
         assert!(batch.len() <= SEGMENTS_PER_BATCH);
         let arguments = batch_arguments(&plan, batch, Path::new("/tmp/batch.h264"));
-        let inputs = arguments.iter().filter(|argument| *argument == "-i").count();
+        let inputs = arguments
+            .iter()
+            .filter(|argument| *argument == "-i")
+            .count();
         assert!(inputs <= SEGMENTS_PER_BATCH);
         let bytes: usize = arguments.iter().map(|argument| argument.len() + 1).sum();
         assert!(bytes < 64 * 1024, "{bytes}");
@@ -509,7 +512,6 @@ fn bitrate_scales_with_the_output_size() {
     assert_eq!(bitrate(&size(320, 240)), 1000);
 }
 
-
 #[test]
 fn probe_output_gives_an_even_display_size_and_a_standard_frame_rate() -> Result<()> {
     let rotated = r#"{"streams":[{"width":1080,"height":1921,"avg_frame_rate":"2997/100","r_frame_rate":"30000/1001","side_data_list":[{"rotation":-90}]}]}"#;
@@ -524,7 +526,8 @@ fn probe_output_gives_an_even_display_size_and_a_standard_frame_rate() -> Result
             }
         }
     );
-    let unknown_nominal = r#"{"streams":[{"width":641,"height":480,"avg_frame_rate":"25/1","r_frame_rate":"0/0"}]}"#;
+    let unknown_nominal =
+        r#"{"streams":[{"width":641,"height":480,"avg_frame_rate":"25/1","r_frame_rate":"0/0"}]}"#;
     assert_eq!(
         ffmpeg::parse_probe(unknown_nominal)?,
         VideoFormat {
@@ -537,7 +540,10 @@ fn probe_output_gives_an_even_display_size_and_a_standard_frame_rate() -> Result
         }
     );
     let screen_recording = r#"{"streams":[{"width":640,"height":480,"avg_frame_rate":"1253/97","r_frame_rate":"60/1"}]}"#;
-    assert_eq!(ffmpeg::parse_probe(screen_recording)?.frame_rate.numerator, 60);
+    assert_eq!(
+        ffmpeg::parse_probe(screen_recording)?.frame_rate.numerator,
+        60
+    );
     let timebase_rate = r#"{"streams":[{"width":640,"height":480,"avg_frame_rate":"8999/300","r_frame_rate":"90000/1"}]}"#;
     assert_eq!(
         ffmpeg::parse_probe(timebase_rate)?.frame_rate,
@@ -655,7 +661,6 @@ fn a_failing_tool_reports_its_last_error_line() {
     assert_eq!(missing.to_string(), "[[error.ffmpegMissing]]");
 }
 
-
 #[cfg(unix)]
 fn cancel_after(cancellation: &Cancellation, delay: Duration) {
     let cancellation = cancellation.clone();
@@ -686,13 +691,18 @@ fn cancelling_stops_a_running_tool_without_waiting_for_it() {
 
 #[cfg(unix)]
 #[test]
-fn a_stalled_probe_can_be_cancelled_and_times_out() {
+fn a_stalled_probe_can_be_cancelled_and_times_out() -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let directory = tempfile::tempdir()?;
+    let stalled = directory.path().join("ffprobe");
+    std::fs::write(&stalled, "#!/bin/sh\nsleep 30\n")?;
+    std::fs::set_permissions(&stalled, std::fs::Permissions::from_mode(0o755))?;
     let cancellation = Cancellation::default();
     let _operation = cancellation.begin();
     cancel_after(&cancellation, Duration::from_millis(200));
     let started = Instant::now();
     let error =
-        ffmpeg::probe(Path::new("/bin/sleep"), std::ffi::OsStr::new("30"), &cancellation).unwrap_err();
+        ffmpeg::probe(&stalled, std::ffi::OsStr::new("input.mp4"), &cancellation).unwrap_err();
     assert!(error.is::<Cancelled>());
     assert!(started.elapsed() < Duration::from_secs(5));
     let idle = Cancellation::default();
@@ -705,6 +715,7 @@ fn a_stalled_probe_can_be_cancelled_and_times_out() {
     )
     .unwrap_err();
     assert_eq!(error.to_string(), "[[error.toolTimeout]]");
+    Ok(())
 }
 
 #[test]

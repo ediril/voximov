@@ -137,9 +137,6 @@
   "export.mix": "エクスポートミックス",
   "export.trackPrefix": "トラック・",
   "help.menu": "ヘルプとショートカット",
-  "preview.placeholderName": "ビデオ + あなたの声",
-  "preview.title": "プレビュー",
-  "help.howTo": "使い方",
   "status.summary": "トラック: {value0} · ファイル: {value1}",
   "status.format": "WAV/MP3・48kHz・ステレオ",
   "history.undo": "元に戻す",
@@ -491,6 +488,9 @@
   "action.addScript": "スクリプトクリップを追加中…",
   "action.changeVoice": "プロジェクトの音声を変更中…",
   "action.saveVoiceover": "ナレーション設定を保存中…",
+  "export.button": "書き出し",
+  "export.mixWav": "ミックスを書き出し (WAV)",
+  "export.mixMp3": "ミックスを書き出し (MP3)",
   "export.video": "ビデオを書き出す (MP4)",
   "action.exportVideo": "ビデオを書き出し中…",
   "dialog.exportVideo": "ビデオの書き出し",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "ビデオの書き出しは macOS でのみ使用できます",
   "error.ffmpegMissing": "FFmpeg が見つかりません。ビデオの書き出しを復元するには Voximov を再インストールしてください。",
   "error.videoExport": "ビデオの書き出しに失敗しました: {detail}",
-  "error.videoFormat": "ビデオのサイズとフレームレートを読み取れませんでした"
+  "error.videoFormat": "ビデオのサイズとフレームレートを読み取れませんでした",
+  "error.toolTimeout": "FFmpeg が応答しなくなりました"
 }

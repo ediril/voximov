@@ -11,7 +11,6 @@ import HelpDialog from './components/HelpDialog'
 import CloseDialog from './components/CloseDialog'
 import Notice from './components/Notice'
 import WindowControls from './components/WindowControls'
-import PreviewInfo from './components/PreviewInfo'
 import SettingsDialog from './components/SettingsDialog'
 import RemoveTrackDialog from './components/RemoveTrackDialog'
 import { translateMessage } from './i18n'
@@ -39,7 +38,7 @@ export default function App() {
         <VideoPreview {...studio} />
       </section>
       <Timeline
-        transport={<Transport {...studio} preview={<PreviewInfo {...studio} />} />}
+        transport={<Transport {...studio} />}
         tracks={studio.tracks}
         assets={studio.assets}
         selectedTrackId={studio.selectedTrackId}

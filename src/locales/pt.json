@@ -137,9 +137,6 @@
   "export.mix": "MIX DE EXPORTAÇÃO",
   "export.trackPrefix": "RASTREAR ·",
   "help.menu": "Ajuda e atalhos",
-  "preview.placeholderName": "VÍDEO + SUA VOZ",
-  "preview.title": "PRÉ-VISUALIZAÇÃO",
-  "help.howTo": "Como usar",
   "status.summary": "Faixas: {value0} · Arquivos: {value1}",
   "status.format": "WAV/MP3 · 48 kHz · Estéreo",
   "history.undo": "Desfazer",
@@ -491,6 +488,9 @@
   "action.addScript": "Adicionando clipe de roteiro…",
   "action.changeVoice": "Alterando a voz do projeto…",
   "action.saveVoiceover": "Salvando configurações de narração…",
+  "export.button": "Exportar",
+  "export.mixWav": "Exportar mixagem (WAV)",
+  "export.mixMp3": "Exportar mixagem (MP3)",
   "export.video": "Exportar vídeo (MP4)",
   "action.exportVideo": "Exportando vídeo…",
   "dialog.exportVideo": "Exportar vídeo",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "A exportação de vídeo está disponível apenas no macOS",
   "error.ffmpegMissing": "O FFmpeg não foi encontrado. Reinstale o Voximov para restaurar a exportação de vídeo.",
   "error.videoExport": "A exportação de vídeo falhou: {detail}",
-  "error.videoFormat": "Não foi possível ler o tamanho e a taxa de quadros do vídeo"
+  "error.videoFormat": "Não foi possível ler o tamanho e a taxa de quadros do vídeo",
+  "error.toolTimeout": "O FFmpeg parou de responder"
 }

@@ -397,37 +397,6 @@ kbd {
   min-width: 0;
   background: #121416;
 }
-.preview-heading {
-  height: 45px;
-  display: flex;
-  align-items: center;
-  padding: 0 23px;
-  gap: 15px;
-  flex-shrink: 0;
-  border-bottom: 1px solid #292d30;
-}
-.preview-heading > span {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  color: #a6ada9;
-  font-size: 9px;
-  letter-spacing: 1.6px;
-}
-.preview-heading > small {
-  margin-left: auto;
-  color: #5f6a64;
-  font-size: 9px;
-  letter-spacing: 1px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 55%;
-}
-.preview-heading > .icon-button {
-  height: 26px;
-  width: 25px;
-}
 .video-stage {
   flex: 1;
   min-height: 0;
@@ -578,11 +547,12 @@ kbd {
   background: #4a563e;
 }
 .record-button {
+  width: 34px;
   height: 34px;
-  padding: 0 11px;
+  padding: 0;
   display: flex;
   align-items: center;
-  gap: 9px;
+  justify-content: center;
   border-radius: 5px;
   background: #30272a;
   color: #e5aca9;
@@ -1240,15 +1210,6 @@ kbd {
     justify-content: flex-start;
     padding-left: 28px;
   }
-  .preview-heading {
-    padding: 0 16px;
-  }
-  .preview-heading > small {
-    display: none;
-  }
-  .preview-heading > .icon-button {
-    margin-left: auto;
-  }
   .inspector-tabs > button {
     padding: 0 12px;
   }
@@ -1434,57 +1395,6 @@ kbd {
 .preview-panel {
   position: relative;
 }
-.preview-heading {
-  position: static;
-  height: 32px;
-  min-width: 60px;
-  max-width: 210px;
-  flex: 1 1 210px;
-  padding: 0 5px;
-  gap: 6px;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-}
-.preview-details {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-}
-.preview-details > span,
-.preview-details > small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.preview-details > span {
-  font-size: 8px;
-  letter-spacing: 1px;
-}
-.preview-details > small {
-  display: flex;
-  font-size: 9px;
-  margin-top: 2px;
-  color: #a6ada2;
-}
-.preview-filename {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.preview-extension {
-  flex-shrink: 0;
-}
-.preview-heading > svg {
-  flex-shrink: 0;
-}
-.preview-heading > .icon-button {
-  margin-left: 0;
-  width: 22px;
-  height: 24px;
-}
 .preview-empty {
   height: 82%;
 }
@@ -1582,8 +1492,7 @@ kbd {
   }
 }
 @media (max-width: 880px) {
-  .record-target,
-  .preview-heading > svg {
+  .record-target {
     display: none;
   }
 }

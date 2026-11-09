@@ -137,9 +137,6 @@
   "export.mix": "EXPORT MIX",
   "export.trackPrefix": "TRACK ·",
   "help.menu": "Help and shortcuts",
-  "preview.placeholderName": "VIDEO + YOUR VOICE",
-  "preview.title": "PREVIEW",
-  "help.howTo": "How to use",
   "status.summary": "Tracks: {value0} · Files: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stereo",
   "history.undo": "Undo",
@@ -491,6 +488,9 @@
   "action.addScript": "Adding script clip…",
   "action.changeVoice": "Changing project voice…",
   "action.saveVoiceover": "Saving voiceover settings…",
+  "export.button": "Export",
+  "export.mixWav": "Export mix (WAV)",
+  "export.mixMp3": "Export mix (MP3)",
   "export.video": "Export video (MP4)",
   "action.exportVideo": "Exporting video…",
   "dialog.exportVideo": "Export video",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Video export is available only on macOS",
   "error.ffmpegMissing": "FFmpeg was not found. Reinstall Voximov to restore video export.",
   "error.videoExport": "Video export failed: {detail}",
-  "error.videoFormat": "The video size and frame rate could not be read"
+  "error.videoFormat": "The video size and frame rate could not be read",
+  "error.toolTimeout": "FFmpeg stopped responding"
 }

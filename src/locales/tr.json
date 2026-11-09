@@ -137,9 +137,6 @@
   "export.mix": "İHRACAT KARIŞIMI",
   "export.trackPrefix": "PARÇA ·",
   "help.menu": "Yardım ve kısayollar",
-  "preview.placeholderName": "VİDEO + SESİNİZ",
-  "preview.title": "ÖNİZLEME",
-  "help.howTo": "Nasıl kullanılır",
   "status.summary": "Kanallar: {value0} · Dosyalar: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stereo",
   "history.undo": "Geri al",
@@ -491,6 +488,9 @@
   "action.addScript": "Metin klibi ekleniyor…",
   "action.changeVoice": "Proje sesi değiştiriliyor…",
   "action.saveVoiceover": "Seslendirme ayarları kaydediliyor…",
+  "export.button": "Dışa aktar",
+  "export.mixWav": "Miksi dışa aktar (WAV)",
+  "export.mixMp3": "Miksi dışa aktar (MP3)",
   "export.video": "Videoyu dışa aktar (MP4)",
   "action.exportVideo": "Video dışa aktarılıyor…",
   "dialog.exportVideo": "Videoyu dışa aktar",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Video dışa aktarma yalnızca macOS'ta kullanılabilir",
   "error.ffmpegMissing": "FFmpeg bulunamadı. Video dışa aktarmayı geri getirmek için Voximov'u yeniden yükleyin.",
   "error.videoExport": "Video dışa aktarılamadı: {detail}",
-  "error.videoFormat": "Videonun boyutu ve kare hızı okunamadı"
+  "error.videoFormat": "Videonun boyutu ve kare hızı okunamadı",
+  "error.toolTimeout": "FFmpeg yanıt vermiyor"
 }

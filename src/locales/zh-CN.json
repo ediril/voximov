@@ -137,9 +137,6 @@
   "export.mix": "出口组合",
   "export.trackPrefix": "追踪·",
   "help.menu": "帮助和快捷方式",
-  "preview.placeholderName": "视频+你的声音",
-  "preview.title": "预览",
-  "help.howTo": "如何使用",
   "status.summary": "轨道: {value0} · 文件: {value1}",
   "status.format": "WAV / MP3·48kHz·立体声",
   "history.undo": "撤销",
@@ -491,6 +488,9 @@
   "action.addScript": "正在添加脚本片段…",
   "action.changeVoice": "正在更改项目语音…",
   "action.saveVoiceover": "正在保存旁白设置…",
+  "export.button": "导出",
+  "export.mixWav": "导出混音 (WAV)",
+  "export.mixMp3": "导出混音 (MP3)",
   "export.video": "导出视频 (MP4)",
   "action.exportVideo": "正在导出视频…",
   "dialog.exportVideo": "导出视频",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "视频导出仅在 macOS 上可用",
   "error.ffmpegMissing": "未找到 FFmpeg。请重新安装 Voximov 以恢复视频导出。",
   "error.videoExport": "视频导出失败:{detail}",
-  "error.videoFormat": "无法读取视频尺寸和帧率"
+  "error.videoFormat": "无法读取视频尺寸和帧率",
+  "error.toolTimeout": "FFmpeg 已停止响应"
 }

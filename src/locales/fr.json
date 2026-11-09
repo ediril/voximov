@@ -137,9 +137,6 @@
   "export.mix": "MÉLANGE EXPORTATION",
   "export.trackPrefix": "PISTE ·",
   "help.menu": "Aide et raccourcis",
-  "preview.placeholderName": "VIDÉO + VOTRE VOIX",
-  "preview.title": "APERÇU",
-  "help.howTo": "Comment utiliser",
   "status.summary": "Pistes: {value0} · Fichiers: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stéréo",
   "history.undo": "Annuler",
@@ -491,6 +488,9 @@
   "action.addScript": "Ajout du clip de script…",
   "action.changeVoice": "Changement de la voix du projet…",
   "action.saveVoiceover": "Enregistrement des réglages de voix off…",
+  "export.button": "Exporter",
+  "export.mixWav": "Exporter le mixage (WAV)",
+  "export.mixMp3": "Exporter le mixage (MP3)",
   "export.video": "Exporter la vidéo (MP4)",
   "action.exportVideo": "Exportation de la vidéo…",
   "dialog.exportVideo": "Exporter la vidéo",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "L'exportation vidéo n'est disponible que sur macOS",
   "error.ffmpegMissing": "FFmpeg est introuvable. Réinstallez Voximov pour rétablir l'exportation vidéo.",
   "error.videoExport": "L'exportation vidéo a échoué : {detail}",
-  "error.videoFormat": "Impossible de lire la taille et la fréquence d'images de la vidéo"
+  "error.videoFormat": "Impossible de lire la taille et la fréquence d'images de la vidéo",
+  "error.toolTimeout": "FFmpeg ne répond plus"
 }

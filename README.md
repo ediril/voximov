@@ -162,7 +162,7 @@ cargo fmt --manifest-path backend/Cargo.toml --check
 ```
 
 `npm test` runs the Vitest unit tests and the Rust engine tests. `npm run lint` runs ESLint and
-Clippy. The video export tests run FFmpeg from `VOXIMOV_FFMPEG` and `VOXIMOV_FFPROBE`, or from
+Clippy. On macOS, the video export tests run FFmpeg from `VOXIMOV_FFMPEG` and `VOXIMOV_FFPROBE`, or from
 `PATH`, and skip with a message when neither is found. To test the bundled build, run
 `scripts/build-ffmpeg.sh` and point both variables at `backend/binaries/ffmpeg-aarch64-apple-darwin`
 and `backend/binaries/ffprobe-aarch64-apple-darwin`. Without those binaries, desktop builds still

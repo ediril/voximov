@@ -137,9 +137,6 @@
   "export.mix": "ESPORTA MISCELA",
   "export.trackPrefix": "PISTA ·",
   "help.menu": "Guida e scorciatoie",
-  "preview.placeholderName": "VIDEO + LA TUA VOCE",
-  "preview.title": "ANTEPRIMA",
-  "help.howTo": "Come usare",
   "status.summary": "Tracce: {value0} · File: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stereo",
   "history.undo": "Annulla",
@@ -491,6 +488,9 @@
   "action.addScript": "Aggiunta della clip di copione…",
   "action.changeVoice": "Cambio della voce del progetto…",
   "action.saveVoiceover": "Salvataggio delle impostazioni voce fuori campo…",
+  "export.button": "Esporta",
+  "export.mixWav": "Esporta mix (WAV)",
+  "export.mixMp3": "Esporta mix (MP3)",
   "export.video": "Esporta video (MP4)",
   "action.exportVideo": "Esportazione del video…",
   "dialog.exportVideo": "Esporta video",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "L'esportazione video è disponibile solo su macOS",
   "error.ffmpegMissing": "FFmpeg non è stato trovato. Reinstalla Voximov per ripristinare l'esportazione video.",
   "error.videoExport": "Esportazione video non riuscita: {detail}",
-  "error.videoFormat": "Impossibile leggere le dimensioni e la frequenza dei fotogrammi del video"
+  "error.videoFormat": "Impossibile leggere le dimensioni e la frequenza dei fotogrammi del video",
+  "error.toolTimeout": "FFmpeg ha smesso di rispondere"
 }

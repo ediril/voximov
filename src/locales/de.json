@@ -137,9 +137,6 @@
   "export.mix": "MIX EXPORTIEREN",
   "export.trackPrefix": "SPUR ·",
   "help.menu": "Hilfe und Verknüpfungen",
-  "preview.placeholderName": "VIDEO + DEINE STIMME",
-  "preview.title": "VORSCHAU",
-  "help.howTo": "Verwendung",
   "status.summary": "Spuren: {value0} · Dateien: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stereo",
   "history.undo": "Rückgängig",
@@ -491,6 +488,9 @@
   "action.addScript": "Skriptclip wird hinzugefügt…",
   "action.changeVoice": "Projektstimme wird geändert…",
   "action.saveVoiceover": "Sprechereinstellungen werden gespeichert…",
+  "export.button": "Exportieren",
+  "export.mixWav": "Mix exportieren (WAV)",
+  "export.mixMp3": "Mix exportieren (MP3)",
   "export.video": "Video exportieren (MP4)",
   "action.exportVideo": "Video wird exportiert…",
   "dialog.exportVideo": "Video exportieren",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Der Videoexport ist nur unter macOS verfügbar",
   "error.ffmpegMissing": "FFmpeg wurde nicht gefunden. Installieren Sie Voximov neu, um den Videoexport wiederherzustellen.",
   "error.videoExport": "Der Videoexport ist fehlgeschlagen: {detail}",
-  "error.videoFormat": "Größe und Bildrate des Videos konnten nicht gelesen werden"
+  "error.videoFormat": "Größe und Bildrate des Videos konnten nicht gelesen werden",
+  "error.toolTimeout": "FFmpeg reagiert nicht mehr"
 }

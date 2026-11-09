@@ -2,7 +2,7 @@ import { localizedName, t } from '../i18n'
 import { Headphones, Mic, Pause, Play, SkipBack, Square } from 'lucide-react'
 import { formatTime } from '../types'
 import type { StudioController } from '../useStudio'
-import type { ReactNode } from 'react'
+import ExportButton from './ExportButton'
 
 type Props = Pick<
   StudioController,
@@ -20,7 +20,10 @@ type Props = Pick<
   | 'record'
   | 'inputLevel'
   | 'generating'
-> & { preview: ReactNode }
+  | 'exportAudio'
+  | 'exportVideo'
+  | 'canExportVideo'
+>
 
 export default function Transport({
   position,
@@ -37,7 +40,9 @@ export default function Transport({
   record,
   inputLevel,
   generating,
-  preview,
+  exportAudio,
+  exportVideo,
+  canExportVideo,
 }: Props) {
   const waiting = generating && !playing && !recording
   return (
@@ -79,13 +84,16 @@ export default function Transport({
         </button>
         <button
           className={`record-button ${recording ? 'recording' : ''}`}
-          title={waiting ? t('transport.waitForGeneration') : undefined}
+          aria-label={recording ? t('transport.stopRecording') : t('transport.record')}
+          title={
+            waiting
+              ? t('transport.waitForGeneration')
+              : `${recording ? t('transport.stopRecording') : t('transport.record')} · R`
+          }
           disabled={!!busy || waiting}
           onClick={() => void record()}
         >
           <span className="record-circle" />
-          {recording ? t('transport.stopRecording') : t('transport.record')}
-          <kbd>R</kbd>
         </button>
         <button
           className={`icon-button monitor-button ${monitor ? 'enabled' : ''}`}
@@ -96,8 +104,15 @@ export default function Transport({
         >
           <Headphones size={15} />
         </button>
+        <ExportButton
+          exportAudio={exportAudio}
+          exportVideo={exportVideo}
+          canExportVideo={canExportVideo}
+          busy={busy}
+          recording={recording}
+          duration={duration}
+        />
       </div>
-      {preview}
       <div className="transport-readout">
         <span className="time-display">
           {formatTime(position, true)}

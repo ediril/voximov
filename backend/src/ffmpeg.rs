@@ -238,14 +238,10 @@ pub fn supervise(
     let status = loop {
         if cancellation.requested() {
             stop(&mut child);
-            let _ = output_reader.join();
-            let _ = error_reader.join();
             return Err(Cancelled.into());
         }
         if timeout.is_some_and(|timeout| started.elapsed() > timeout) {
             stop(&mut child);
-            let _ = output_reader.join();
-            let _ = error_reader.join();
             return Err(anyhow::anyhow!(crate::i18n::message("error.toolTimeout")));
         }
         if let Some(status) = child.try_wait()? {

@@ -137,9 +137,6 @@
   "export.mix": "ЕКСПОРТНА СУМІШ",
   "export.trackPrefix": "ТРЕКИ ·",
   "help.menu": "Довідка та ярлики",
-  "preview.placeholderName": "ВІДЕО + ВАШ ГОЛОС",
-  "preview.title": "ПОПЕРЕДНІЙ ПЕРЕГЛЯД",
-  "help.howTo": "Як використовувати",
   "status.summary": "Доріжки: {value0} · Файли: {value1}",
   "status.format": "WAV / MP3 · 48 кГц · Стерео",
   "history.undo": "Скасувати",
@@ -491,6 +488,9 @@
   "action.addScript": "Додаю кліп зі сценарієм…",
   "action.changeVoice": "Змінюю голос проєкту…",
   "action.saveVoiceover": "Зберігаю налаштування голосу…",
+  "export.button": "Експорт",
+  "export.mixWav": "Експорт міксу (WAV)",
+  "export.mixMp3": "Експорт міксу (MP3)",
   "export.video": "Експорт відео (MP4)",
   "action.exportVideo": "Експорт відео…",
   "dialog.exportVideo": "Експорт відео",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Експорт відео доступний лише в macOS",
   "error.ffmpegMissing": "FFmpeg не знайдено. Перевстановіть Voximov, щоб відновити експорт відео.",
   "error.videoExport": "Не вдалося експортувати відео: {detail}",
-  "error.videoFormat": "Не вдалося прочитати розмір і частоту кадрів відео"
+  "error.videoFormat": "Не вдалося прочитати розмір і частоту кадрів відео",
+  "error.toolTimeout": "FFmpeg перестав відповідати"
 }

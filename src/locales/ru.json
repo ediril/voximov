@@ -137,9 +137,6 @@
   "export.mix": "ЭКСПОРТ МИКСА",
   "export.trackPrefix": "ДОРОЖКА ·",
   "help.menu": "Справка и клавиши",
-  "preview.placeholderName": "ВИДЕО + ТВОЙ ГОЛОС",
-  "preview.title": "ПРЕДПРОСМОТР",
-  "help.howTo": "Как пользоваться",
   "status.summary": "Дорожки: {value0} · Файлы: {value1}",
   "status.format": "WAV / MP3 · 48 кГц · Стерео",
   "history.undo": "Отменить",
@@ -491,6 +488,9 @@
   "action.addScript": "Добавляю клип со сценарием…",
   "action.changeVoice": "Меняю голос проекта…",
   "action.saveVoiceover": "Сохраняю настройки голоса…",
+  "export.button": "Экспорт",
+  "export.mixWav": "Экспорт микса (WAV)",
+  "export.mixMp3": "Экспорт микса (MP3)",
   "export.video": "Экспорт видео (MP4)",
   "action.exportVideo": "Экспортирую видео…",
   "dialog.exportVideo": "Экспорт видео",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Экспорт видео доступен только в macOS",
   "error.ffmpegMissing": "FFmpeg не найден. Переустанови Voximov, чтобы вернуть экспорт видео.",
   "error.videoExport": "Не удалось экспортировать видео: {detail}",
-  "error.videoFormat": "Не удалось прочитать размер и частоту кадров видео"
+  "error.videoFormat": "Не удалось прочитать размер и частоту кадров видео",
+  "error.toolTimeout": "FFmpeg перестал отвечать"
 }

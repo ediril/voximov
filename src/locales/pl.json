@@ -137,9 +137,6 @@
   "export.mix": "EKSPORT MIESZANKI",
   "export.trackPrefix": "ŚLEDŹ ·",
   "help.menu": "Pomoc i skróty",
-  "preview.placeholderName": "WIDEO + TWÓJ GŁOS",
-  "preview.title": "PODGLĄD",
-  "help.howTo": "Jak używać",
   "status.summary": "Ścieżki: {value0} · Pliki: {value1}",
   "status.format": "WAV / MP3 · 48 kHz · Stereo",
   "history.undo": "Cofnij",
@@ -491,6 +488,9 @@
   "action.addScript": "Dodawanie klipu ze scenariuszem…",
   "action.changeVoice": "Zmiana głosu projektu…",
   "action.saveVoiceover": "Zapisywanie ustawień lektora…",
+  "export.button": "Eksportuj",
+  "export.mixWav": "Eksportuj miks (WAV)",
+  "export.mixMp3": "Eksportuj miks (MP3)",
   "export.video": "Eksportuj wideo (MP4)",
   "action.exportVideo": "Eksportowanie wideo…",
   "dialog.exportVideo": "Eksportuj wideo",
@@ -501,5 +501,6 @@
   "error.videoExportUnsupported": "Eksport wideo jest dostępny tylko w systemie macOS",
   "error.ffmpegMissing": "Nie znaleziono FFmpeg. Zainstaluj ponownie Voximov, aby przywrócić eksport wideo.",
   "error.videoExport": "Eksport wideo nie powiódł się: {detail}",
-  "error.videoFormat": "Nie można odczytać rozmiaru i liczby klatek na sekundę wideo"
+  "error.videoFormat": "Nie można odczytać rozmiaru i liczby klatek na sekundę wideo",
+  "error.toolTimeout": "FFmpeg przestał odpowiadać"
 }

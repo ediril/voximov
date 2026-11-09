@@ -33,6 +33,7 @@ export function shortcutFor(
     KeyV: 'select',
     KeyX: 'split',
     Delete: 'delete',
+    Backspace: 'delete',
     Home: 'home',
   }
   return shortcuts[event.code] ?? null

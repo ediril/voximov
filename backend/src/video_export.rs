@@ -360,7 +360,7 @@ pub fn mux_arguments(
 ) -> Vec<OsString> {
     let rate = plan.format.frame_rate;
     let mut arguments = header();
-    arguments.extend(["-f", "h264", "-framerate", &rate.to_string(), "-i"].map(OsString::from));
+    arguments.extend(["-f", "h264", "-r", &rate.to_string(), "-i"].map(OsString::from));
     arguments.push(video.into());
     arguments.push("-i".into());
     arguments.push(audio.into());
@@ -448,25 +448,31 @@ pub fn export(store: &mut Store, destination: &Path) -> Result<Outcome> {
     };
     let partial = |suffix: &str| destination.with_extension(format!("{}.{suffix}", id()));
     let output = partial("partial");
+    let audio = partial("partial.wav");
+    let batch_file = partial("partial.batch.h264");
+    let video = partial("partial.h264");
     let temporary = TemporaryFiles(vec![
-        partial("partial.wav"),
-        partial("partial.batch.h264"),
-        partial("partial.h264"),
+        audio.clone(),
+        batch_file.clone(),
+        video.clone(),
         output.clone(),
     ]);
-    let [audio, batch_file, video, _] = &temporary.0[..] else {
-        unreachable!()
-    };
     let progress = store.progress.clone();
     let result = (|| {
         store.progress = progress.range(0., 0.2);
-        let rendered = mixer::render(store, audio, None, "wav");
+        let rendered = mixer::render(store, &audio, None, "wav");
         store.progress = progress.clone();
         rendered?;
-        encode_video(store, &plan, batch_file, video, &progress.range(0.2, 0.75))?;
+        encode_video(
+            store,
+            &plan,
+            &batch_file,
+            &video,
+            &progress.range(0.2, 0.75),
+        )?;
         ffmpeg::run(
             &ffmpeg::locate(Tool::Ffmpeg),
-            &mux_arguments(&plan, video, audio, &output),
+            &mux_arguments(&plan, &video, &audio, &output),
             plan.length * 1_000_000 / SAMPLE_RATE as u64,
             &progress.range(0.95, 0.05),
             &store.cancellation,
