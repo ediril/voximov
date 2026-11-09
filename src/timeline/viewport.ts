@@ -3,18 +3,34 @@ export interface ViewWindow {
   span: number
 }
 export type ScrollMode = 'pan' | 'left' | 'right'
-export const minimumSpan = 2
+export const minimumSpan = 0.25
+export const fittedView = (duration: number) => ({
+  start: 0,
+  span: duration > 0 ? Math.max(minimumSpan, duration * 1.05) : 60,
+})
 export const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value))
 
+export const zoomLevels = [
+  0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1200,
+  1800, 2700, 3600, 5400, 7200,
+]
+const levelTolerance = 1e-6
+
+export function steppedSpan(span: number, direction: 'in' | 'out') {
+  if (direction === 'in')
+    return [...zoomLevels].reverse().find((level) => level < span - levelTolerance) ?? minimumSpan
+  return zoomLevels.find((level) => level > span + levelTolerance) ?? span * 1.5
+}
+
 export function zoomViewport(
   view: ViewWindow,
-  factor: number,
+  targetSpan: number,
   maximumSpan: number,
   position: number,
   pointerFraction?: number,
 ): ViewWindow {
-  const span = clamp(view.span * factor, minimumSpan, maximumSpan)
+  const span = clamp(targetSpan, minimumSpan, maximumSpan)
   const fraction =
     pointerFraction !== undefined
       ? clamp(pointerFraction, 0, 1)

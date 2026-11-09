@@ -28,7 +28,9 @@ export const sampleRate = 48000
 
 const timeModes: TimeMode[] = ['time', 'frames', 'timecode']
 const frameTolerance = 1e-6
-const timeTickSteps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600]
+const timeTickSteps = [
+  0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600,
+]
 const secondTickMultiples = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600]
 const minimumTickPixels = 82
 
@@ -144,5 +146,8 @@ export function rulerTicks(
 
 export function rulerLabel(tick: number, step: number, mode: TimeMode, rate: FrameRate | null) {
   if (effectiveMode(mode, rate) !== 'time' && rate) return formatPosition(tick, mode, rate)
-  return step < 1 ? `${formatTime(tick)}.${Math.round((tick % 1) * 10)}` : formatTime(tick)
+  if (step >= 1) return formatTime(tick)
+  const digits = step < 0.1 ? 2 : 1
+  const fraction = Math.round((tick % 1) * 10 ** digits) % 10 ** digits
+  return `${formatTime(tick)}.${fraction.toString().padStart(digits, '0')}`
 }

@@ -6,12 +6,21 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { clamp, thumbGeometry, dragViewport, zoomViewport, type ViewWindow } from './viewport'
+import {
+  clamp,
+  dragViewport,
+  fittedView,
+  steppedSpan,
+  thumbGeometry,
+  zoomViewport,
+  type ViewWindow,
+} from './viewport'
 import { shortcutFor } from '../shortcuts'
 import type { TimelineProps } from './types'
 import { rulerTicks } from './timeDisplay'
 
 export function useTimelineViewport({
+  projectId,
   duration,
   position,
   recording,
@@ -20,9 +29,15 @@ export function useTimelineViewport({
   frameRate,
 }: Pick<
   TimelineProps,
-  'duration' | 'position' | 'recording' | 'onSeek' | 'timeMode' | 'frameRate'
+  'projectId' | 'duration' | 'position' | 'recording' | 'onSeek' | 'timeMode' | 'frameRate'
 >) {
   const [view, setView] = useState<ViewWindow>({ start: 0, span: 60 })
+  const fittedProject = useRef<string | null>(null)
+  useEffect(() => {
+    if (duration <= 0 || fittedProject.current === projectId) return
+    fittedProject.current = projectId
+    setView(fittedView(duration))
+  }, [projectId, duration])
   const [laneWidth, setLaneWidth] = useState(800)
   const rulerRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLElement>(null)
@@ -76,9 +91,15 @@ export function useTimelineViewport({
   }
 
   const zoom = useCallback(
-    (factor: number, pointerFraction?: number) => {
+    (nextSpan: (span: number) => number, pointerFraction?: number) => {
       setView((current) =>
-        zoomViewport(current, factor, Math.max(3600, duration * 2), position, pointerFraction),
+        zoomViewport(
+          current,
+          nextSpan(current.span),
+          Math.max(3600, duration * 2),
+          position,
+          pointerFraction,
+        ),
       )
     },
     [duration, position],
@@ -98,7 +119,7 @@ export function useTimelineViewport({
       if (!ruler) return
       const bounds = ruler.getBoundingClientRect()
       zoom(
-        event.deltaY < 0 ? 1 / 1.2 : 1.2,
+        (span) => span * (event.deltaY < 0 ? 1 / 1.2 : 1.2),
         (event.clientX - bounds.left) / Math.max(1, bounds.width),
       )
     }
@@ -107,7 +128,7 @@ export function useTimelineViewport({
       const shortcut = shortcutFor(event)
       if (shortcut !== 'zoomIn' && shortcut !== 'zoomOut') return
       event.preventDefault()
-      zoom(shortcut === 'zoomIn' ? 1 / 1.5 : 1.5)
+      zoom((span) => steppedSpan(span, shortcut === 'zoomIn' ? 'in' : 'out'))
     }
     timeline.addEventListener('wheel', wheel, { passive: false })
     window.addEventListener('keydown', keydown)

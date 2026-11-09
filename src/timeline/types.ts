@@ -36,6 +36,7 @@ export interface TimelineProps {
   onTimeStepChange: (step: number) => void
   onSeek: (time: number) => void
   position: number
+  projectId: string
   duration: number
   recording: boolean
   operationPending: boolean

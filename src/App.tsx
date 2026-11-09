@@ -38,6 +38,7 @@ export default function App() {
         <VideoPreview {...studio} />
       </section>
       <Timeline
+        projectId={studio.snapshot.project.id}
         transport={<Transport {...studio} />}
         monitor={<MonitorButton {...studio} />}
         tracks={studio.tracks}

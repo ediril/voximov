@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { TimelineProps } from './types'
 import type { TimelineViewport } from './useTimelineViewport'
-import { minimumSpan } from './viewport'
+import { fittedView, minimumSpan, steppedSpan } from './viewport'
 import { stepFor, stepOptions, type TimeMode } from './timeDisplay'
 
 type Props = Pick<
@@ -196,14 +196,14 @@ export default function TimelineToolbar({
       <div className="tl-toolbar-group">
         <span className="tl-zoom-label">
           {view.span < 60
-            ? t('units.secondsValue', { value0: Math.round(view.span) })
+            ? t('units.secondsValue', { value0: Number(view.span.toPrecision(2)) })
             : t('units.minutesValue', { value0: Math.round((view.span / 60) * 10) / 10 })}
         </span>
         <button
           className="tl-tool"
           title={t('zoom.outTitle')}
           aria-label={t('zoom.out')}
-          onClick={() => zoom(1.5)}
+          onClick={() => zoom((span) => steppedSpan(span, 'out'))}
         >
           <Minus size={15} />
         </button>
@@ -212,7 +212,7 @@ export default function TimelineToolbar({
           title={t('zoom.inTitle')}
           aria-label={t('zoom.in')}
           disabled={view.span <= minimumSpan}
-          onClick={() => zoom(1 / 1.5)}
+          onClick={() => zoom((span) => steppedSpan(span, 'in'))}
         >
           <Plus size={15} />
         </button>
@@ -220,9 +220,7 @@ export default function TimelineToolbar({
           className="tl-tool"
           title={t('zoom.fit')}
           aria-label={t('zoom.fit')}
-          onClick={() =>
-            setView({ start: 0, span: Math.max(5, duration > 0 ? duration * 1.05 : 60) })
-          }
+          onClick={() => setView(fittedView(duration))}
         >
           <Maximize2 size={14} />
         </button>

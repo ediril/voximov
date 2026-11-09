@@ -108,6 +108,12 @@ describe('ruler ticks', () => {
     expect(ticks).toEqual([0, 10, 20, 30, 40, 50])
     expect(rulerLabel(1.5, 0.5, 'time', fps30)).toBe('00:01.5')
   })
+  it('keeps several labelled ticks when zoomed in to a quarter second', () => {
+    const { step, ticks } = rulerTicks({ start: 1, span: 0.25 }, 820, 'time', fps30)
+    expect(ticks.length).toBeGreaterThanOrEqual(3)
+    expect(rulerLabel(ticks[1], step, 'time', fps30)).toBe('00:01.05')
+    expect(rulerLabel(1.25, 0.05, 'time', fps30)).toBe('00:01.25')
+  })
   it('places frame-mode ticks on frame boundaries and labels them in the chosen unit', () => {
     const { step, ticks } = rulerTicks({ start: 1.01, span: 2 }, 820, 'timecode', ntsc)
     expect(step).toBeCloseTo(frameStart(10, ntsc), 12)

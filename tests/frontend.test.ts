@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { decodeAudioPacket } from '../src/protocol'
 import { shortcutFor, targetOwnsKey } from '../src/shortcuts'
-import { dragViewport, thumbGeometry, zoomViewport } from '../src/timeline/viewport'
+import {
+  dragViewport,
+  fittedView,
+  steppedSpan,
+  thumbGeometry,
+  zoomViewport,
+} from '../src/timeline/viewport'
 
 describe('studio keyboard', () => {
   const element = (...matching: string[]) => ({
@@ -86,17 +92,32 @@ describe('zoom scrollbar', () => {
     expect(left).toEqual({ start: 25, span: 5 })
     expect(left.start + left.span).toBe(30)
     expect(dragViewport(view, 100, 600, 'right', 30)).toEqual({ start: 20, span: 15 })
-    expect(dragViewport(view, 100, 600, 'left', 600).span).toBe(2)
+    expect(dragViewport(view, 100, 600, 'left', 600).span).toBe(0.25)
     expect(dragViewport(view, 100, 600, 'pan', -600).start).toBe(0)
   })
   it('keeps the pointer time or playhead fixed while zooming', () => {
-    const zoomed = zoomViewport(view, 0.5, 3600, 0, 0.75)
+    const zoomed = zoomViewport(view, 5, 3600, 0, 0.75)
     expect(zoomed.span).toBe(5)
     expect(zoomed.start + zoomed.span * 0.75).toBe(27.5)
-    const keyboard = zoomViewport(view, 0.5, 3600, 22)
+    const keyboard = zoomViewport(view, 5, 3600, 22)
     expect(keyboard.start + keyboard.span * 0.2).toBe(22)
-    expect(zoomViewport(view, 0.001, 3600, 22).span).toBe(2)
-    expect(zoomViewport(view, 1000, 3600, 0, 0).span).toBe(3600)
+    expect(zoomViewport(view, 0.01, 3600, 22).span).toBe(0.25)
+    expect(zoomViewport(view, 10000, 3600, 0, 0).span).toBe(3600)
+  })
+  it('steps zoom through round levels from any starting zoom', () => {
+    expect(steppedSpan(0.41, 'in')).toBe(0.25)
+    expect(steppedSpan(0.25, 'out')).toBe(0.5)
+    expect(steppedSpan(0.5, 'out')).toBe(0.75)
+    expect(steppedSpan(1, 'in')).toBe(0.75)
+    expect(steppedSpan(1.05, 'out')).toBe(1.5)
+    expect(steppedSpan(1.05, 'in')).toBe(1)
+    expect(steppedSpan(0.25, 'in')).toBe(0.25)
+  })
+  it('fits a short project into the window, down to the closest zoom', () => {
+    expect(fittedView(1).span).toBeCloseTo(1.05, 9)
+    expect(fittedView(0.1)).toEqual({ start: 0, span: 0.25 })
+    expect(fittedView(100).span).toBeCloseTo(105, 9)
+    expect(fittedView(0).span).toBe(60)
   })
 })
 
