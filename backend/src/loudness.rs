@@ -90,6 +90,7 @@ pub fn measure(
     let mut frame = start;
     let mut interleaved = Vec::with_capacity(8192);
     while frame < end {
+        store.cancellation.check()?;
         let count = (end - frame).min(4096) as usize;
         let (samples, _) = mixer.block(&project, frame, count, Some(&track.id), None)?;
         interleaved.clear();

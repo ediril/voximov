@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AudioLines,
   Download,
+  Film,
   FolderOpen,
   Keyboard,
   Menu,
@@ -22,6 +23,8 @@ type Props = Pick<
   | 'selectedTrack'
   | 'saveProject'
   | 'exportAudio'
+  | 'exportVideo'
+  | 'canExportVideo'
   | 'openNative'
   | 'snapshot'
   | 'setHelp'
@@ -37,6 +40,8 @@ export default function StudioHeader({
   selectedTrack,
   saveProject,
   exportAudio,
+  exportVideo,
+  canExportVideo,
   openNative,
   snapshot,
   setHelp,
@@ -121,6 +126,10 @@ export default function StudioHeader({
               MP3
             </button>
           </div>
+          <button disabled={disabled || !canExportVideo} onClick={() => run(exportVideo)}>
+            <Film size={16} />
+            {t('export.video')}
+          </button>
           {selectedTrack && (
             <>
               <span className="menu-section">

@@ -65,6 +65,8 @@ export interface CommandPayloads {
   import_native: { trackId: string; position: number }
   import_paths: { paths: string[]; trackId: string; position: number }
   export: { trackId: string | null; format: 'wav' | 'mp3' }
+  export_video: Record<string, never>
+  export_video_cancel: Record<string, never>
   track_patch: { trackId: string; patch: Partial<Track> }
   track_add: Record<string, never>
   track_remove: { trackId: string }
@@ -92,6 +94,7 @@ export interface CommandPayloads {
 export type CommandName = keyof CommandPayloads
 export interface CommandResult {
   saved?: boolean
+  cancelled?: boolean
   path?: string
   snapshot?: Snapshot
   regions?: ClipRegion[]

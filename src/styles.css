@@ -1647,6 +1647,19 @@ kbd {
   pointer-events: none;
   animation: operation-appear 150ms ease-out;
 }
+.operation-cancel {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid #69745f;
+  border-radius: 4px;
+  background: #333a3b;
+  color: inherit;
+  font-size: 11px;
+  pointer-events: auto;
+}
+.operation-cancel:hover {
+  background: #3a4535;
+}
 @keyframes operation-appear {
   from {
     opacity: 0;

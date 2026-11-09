@@ -2,7 +2,9 @@
 
 Voximov is a desktop app for recording and editing a voiceover over a video. Video audio,
 your voice and music each sit on their own track, so you can cut, move and process them without
-touching the originals. A Rust engine decodes, processes, mixes and exports all audio itself, with no FFmpeg or other external tools. Everything runs locally on your computer.
+touching the originals. A Rust engine decodes, processes, mixes and exports all audio itself. On
+macOS, a bundled FFmpeg turns the edited video and the mix into an MP4. Everything runs locally on
+your computer.
 
 ## Who is it for?
 
@@ -12,8 +14,9 @@ demos, or anything else that needs a voice on top of the picture.
 If your current process is "record in one app, line it up in another, and hope the levels match,"
 Voximov keeps recording, editing and export in one window.
 
-It works best for a single narrator and a finished video. It is not a full video editor; export
-produces audio, and the original video stays untouched.
+It works best for a single narrator and a finished video. It is not a full video editor: export
+produces the audio mix, or on macOS an MP4 of the cut video with that mix, and the original video
+stays untouched.
 
 ## Features
 
@@ -25,6 +28,8 @@ produces audio, and the original video stays untouched.
 - Mixer with volume, pan, mute and solo per track.
 - Video preview for H.264 MP4 and Matroska, with one track per audio stream.
 - Export a single track or the whole mix as WAV or MP3.
+- On macOS, export the edited video with the full mix as an MP4, encoded on the Mac's hardware
+  H.264 encoder. Gaps between video clips become black frames.
 - AI voiceover from a written script with Kokoro, running locally.
 - One project file (`.voximov`) that holds sources, takes and edits, with crash-safe saves.
   Projects saved as `.justspeak` files by earlier versions still open.
@@ -44,8 +49,9 @@ xcode-select --install
 bin/build-macos
 ```
 
-The script installs the npm dependencies, builds the app for your Mac's architecture, and copies a
-versioned `.dmg` to `build/`. The `.app` itself is in `build/.cache/release/bundle/macos/`.
+The script builds a slim LGPL FFmpeg for video export with `scripts/build-ffmpeg.sh` (the first run
+downloads the pinned FFmpeg source and compiles it into `build/.cache/ffmpeg/`), installs the npm
+dependencies, builds the app for Apple Silicon, and copies a versioned `.dmg` to `build/`. The `.app` itself is in `build/.cache/release/bundle/macos/`.
 
 The app is signed ad hoc and not notarized. A build made on your own Mac opens normally. A copy
 downloaded from the internet or from another Mac is blocked on first launch; allow it under
@@ -66,8 +72,8 @@ GitHub-hosted runners. The app needs the WebView2 Runtime.
    track while the other tracks play. Press <kbd>R</kbd> again to finish.
 3. Edit: split with <kbd>X</kbd>, select with <kbd>V</kbd>, and drag clips or their edges.
 4. Shape your voice in the **Effects** tab and balance the tracks in the **Mixer** tab.
-5. Export the mix, or a single track from the mixer, as WAV or MP3. Save the project with
-   <kbd>Cmd</kbd>+<kbd>S</kbd>.
+5. Export the mix, or a single track from the mixer, as WAV or MP3, or export the video as MP4.
+   Save the project with <kbd>Cmd</kbd>+<kbd>S</kbd>.
 
 ## AI voiceover
 
@@ -139,6 +145,7 @@ Commercial use outside those permissions requires a separate paid license. Conta
 use.
 
 Voximov is based on simpleVoiceover by Arcon, used under the MIT License; that notice is in
+[`NOTICE`](NOTICE). The macOS app bundles FFmpeg under the GNU LGPL 2.1 or later, also described in
 [`NOTICE`](NOTICE).
 
 ## Development
@@ -155,7 +162,11 @@ cargo fmt --manifest-path backend/Cargo.toml --check
 ```
 
 `npm test` runs the Vitest unit tests and the Rust engine tests. `npm run lint` runs ESLint and
-Clippy. Builds go to `build/`, and Cargo keeps intermediate files in `build/.cache/`. See
+Clippy. The video export tests run FFmpeg from `VOXIMOV_FFMPEG` and `VOXIMOV_FFPROBE`, or from
+`PATH`, and skip with a message when neither is found. To test the bundled build, run
+`scripts/build-ffmpeg.sh` and point both variables at `backend/binaries/ffmpeg-aarch64-apple-darwin`
+and `backend/binaries/ffprobe-aarch64-apple-darwin`. Without those binaries, desktop builds still
+compile but cannot export video. Builds go to `build/`, and Cargo keeps intermediate files in `build/.cache/`. See
 [`CHANGELOG.md`](CHANGELOG.md) for completed changes and [`TODO.md`](TODO.md) for open work.
 
 ### Releasing

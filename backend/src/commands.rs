@@ -3,6 +3,7 @@ use crate::{
     model::{Asset, Clip, MAX_UPLOAD, SAMPLE_RATE, Track, id},
     native_files,
     storage::Store,
+    video_export,
 };
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
@@ -191,6 +192,29 @@ pub fn import_source(
     store.replace(result?)
 }
 
+fn project_name(store: &Store) -> String {
+    store
+        .config
+        .project_file
+        .as_deref()
+        .and_then(|path| path.file_stem())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| store.project.name.clone())
+}
+
+fn check_export_destination(store: &Store, destination: &Path) -> Result<()> {
+    ensure!(
+        destination.is_absolute(),
+        crate::i18n::message("error.exportPath")
+    );
+    ensure!(
+        store.config.project_file.as_deref() != Some(destination)
+            && !destination.starts_with(store.root()),
+        crate::i18n::message("error.exportOverwritesProject")
+    );
+    Ok(())
+}
+
 pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
     let command = text(value, "command")?;
     let language = value["language"].as_str().unwrap_or("en");
@@ -323,13 +347,7 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
                     .name
                     .clone()
             } else {
-                store
-                    .config
-                    .project_file
-                    .as_deref()
-                    .and_then(|path| path.file_stem())
-                    .map(|name| name.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| store.project.name.clone())
+                project_name(store)
             };
             let destination = if let Some(path) = value["path"].as_str() {
                 Some(PathBuf::from(path))
@@ -339,15 +357,7 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
             let Some(destination) = destination else {
                 return Ok(json!({"saved":false}));
             };
-            ensure!(
-                destination.is_absolute(),
-                crate::i18n::message("error.exportPath")
-            );
-            ensure!(
-                store.config.project_file.as_ref() != Some(&destination)
-                    && !destination.starts_with(store.root()),
-                crate::i18n::message("error.exportOverwritesProject")
-            );
+            check_export_destination(store, &destination)?;
             let temporary = destination.with_extension(format!("{}.partial", id()));
             let rendered = mixer::render(store, &temporary, value["trackId"].as_str(), format);
             if let Err(error) = rendered {
@@ -356,6 +366,30 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<Value> {
             }
             crate::filesystem::replace_file(&temporary, &destination)?;
             return Ok(json!({"saved":true,"path":destination}));
+        }
+        "export_video" => {
+            let _operation = store.cancellation.begin();
+            ensure!(
+                cfg!(target_os = "macos"),
+                crate::i18n::message("error.videoExportUnsupported")
+            );
+            ensure!(
+                video_export::has_video(&store.project),
+                crate::i18n::message("error.noExportVideo")
+            );
+            let destination = if let Some(path) = value["path"].as_str() {
+                Some(PathBuf::from(path))
+            } else {
+                native_files::video(language, &project_name(store))?
+            };
+            let Some(destination) = destination else {
+                return Ok(json!({"saved":false}));
+            };
+            check_export_destination(store, &destination)?;
+            return Ok(match video_export::export(store, &destination)? {
+                video_export::Outcome::Saved => json!({"saved":true,"path":destination}),
+                video_export::Outcome::Cancelled => json!({"saved":false,"cancelled":true}),
+            });
         }
         "undo" => {
             if let Some(project) = store.history.pop() {

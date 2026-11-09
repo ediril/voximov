@@ -3,6 +3,7 @@ set -euo pipefail
 project_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 output_directory="$project_directory/build"
 cd "$project_directory"
+scripts/build-ffmpeg.sh
 npm ci --no-audit --no-fund
 npm run build
 application_version="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"

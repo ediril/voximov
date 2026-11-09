@@ -4,10 +4,33 @@ fn main() {
         if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
             build_audio_output();
         }
+        omit_missing_sidecars();
         tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
             tauri_build::AppManifest::new().commands(&["studio_command", "close_studio"]),
         ))
         .expect("Failed to prepare Tauri application");
+    }
+}
+
+#[cfg(feature = "desktop")]
+fn omit_missing_sidecars() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos")
+        || std::env::var_os("TAURI_CONFIG").is_some()
+    {
+        return;
+    }
+    let target = std::env::var("TARGET").unwrap();
+    let mut missing = false;
+    for program in ["ffmpeg", "ffprobe"] {
+        let sidecar = format!("binaries/{program}-{target}");
+        println!("cargo:rerun-if-changed={sidecar}");
+        missing |= !std::path::Path::new(&sidecar).is_file();
+    }
+    if missing {
+        println!(
+            "cargo:warning=The FFmpeg sidecars are missing, so this build cannot export video. Run scripts/build-ffmpeg.sh to bundle them."
+        );
+        unsafe { std::env::set_var("TAURI_CONFIG", r#"{"bundle":{"externalBin":null}}"#) };
     }
 }
 

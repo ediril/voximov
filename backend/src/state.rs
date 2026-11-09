@@ -1,4 +1,6 @@
-use crate::{generator::Generator, session::AudioSession, storage::Store};
+use crate::{
+    cancellation::Cancellation, generator::Generator, session::AudioSession, storage::Store,
+};
 use std::sync::{Arc, Mutex, atomic::AtomicBool};
 use tokio::sync::Notify;
 
@@ -10,9 +12,11 @@ pub struct StudioState {
     pub connected: Arc<AtomicBool>,
     pub close_requested: Arc<Notify>,
     pub generator: Generator,
+    pub cancellation: Cancellation,
 }
 impl StudioState {
     pub fn new(store: Store) -> Self {
+        let cancellation = store.cancellation.clone();
         let store = Arc::new(Mutex::new(store));
         Self {
             generator: Generator::start(store.clone()),
@@ -21,6 +25,7 @@ impl StudioState {
             shutdown: Arc::new(Notify::new()),
             connected: Arc::new(AtomicBool::new(false)),
             close_requested: Arc::new(Notify::new()),
+            cancellation,
         }
     }
 }

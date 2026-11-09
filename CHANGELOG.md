@@ -4,6 +4,10 @@ All notable changes to Voximov are recorded here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- Export video on macOS: an MP4 of the first video track as edited on the timeline, with black frames in the gaps and the full mix as AAC audio. It encodes on the hardware H.264 encoder, reports progress, and can be cancelled. The app bundles a slim LGPL build of FFmpeg 8.1.3 made by `scripts/build-ffmpeg.sh`.
+
 ### Changed
 
 - The app is renamed to Voximov. New projects are saved as `.voximov` files, and `.justspeak` projects from earlier versions still open. Settings move to `~/.voximov` on macOS and `%LOCALAPPDATA%\Voximov` on Windows; settings in the old folder are not carried over.

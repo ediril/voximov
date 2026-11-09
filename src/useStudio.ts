@@ -26,6 +26,7 @@ import { useScriptClips } from './hooks/useScriptClips'
 import { isSpeechUnavailable, speechNoticeDuration } from './timeline/script'
 import type { TimelineTool } from './timeline/types'
 import { emptyAudioDevices } from './audio/devices'
+import { hasExportableVideo } from './timeline/videoExport'
 import {
   copySelection,
   selectionFromRegions,
@@ -46,6 +47,7 @@ export function useStudio() {
   const [snapping, setSnapping] = useState(true)
   const [trackToRemove, setTrackToRemove] = useState<Track | null>(null)
   const [busy, setBusy] = useState('')
+  const [exportingVideo, setExportingVideo] = useState(false)
   const visibleBusy = useOperationIndicator(busy)
   const [progress, setProgress] = useState<OperationProgress | null>(null)
   const [notice, setNotice] = useTransientMessage()
@@ -255,6 +257,21 @@ export function useStudio() {
     if (result?.saved)
       setNotice(t('notice.exported', { value0: format.toUpperCase(), value1: result.path ?? '' }))
   }
+  const exportVideo = async () => {
+    if (operationBlocked) return
+    setExportingVideo(true)
+    try {
+      const result = await action(t('action.exportVideo'), 'export_video')
+      if (result?.cancelled) setNotice(t('notice.exportCancelled'))
+      else if (result?.saved)
+        setNotice(t('notice.exported', { value0: 'MP4', value1: result.path ?? '' }))
+    } finally {
+      setExportingVideo(false)
+    }
+  }
+  const cancelVideoExport = () => {
+    void request('export_video_cancel').catch(showError)
+  }
   const removeClip = () => {
     if (selection?.regions.length) {
       void action(t('action.removeClip'), 'regions_edit', {
@@ -451,6 +468,9 @@ export function useStudio() {
     updateTrack,
     saveProject,
     exportAudio,
+    exportVideo,
+    canExportVideo: hasExportableVideo(tracks, assets),
+    cancelVideoExport: exportingVideo ? cancelVideoExport : null,
     removeClip,
     undo,
     redo,

@@ -50,6 +50,10 @@ async fn studio_command(
         }
         return Ok(serde_json::json!({}));
     }
+    if request["command"] == "export_video_cancel" {
+        state.studio.cancellation.request();
+        return Ok(json!({}));
+    }
     if let Some(response) = speech_command(&state.studio, &request).await {
         return response;
     }

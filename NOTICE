@@ -10,6 +10,7 @@ licensed under the PolyForm Strict License 1.0.0 in LICENSE, including:
 - AI voiceover: script clips, local Kokoro generation, and the voice picker
 - the Kokoro management scripts in scripts/
 - the removal of Linux support and the rewritten documentation
+- MP4 video export and the FFmpeg build script in scripts/
 
 In this repository's history, every commit up to 3d2ede4 comes from the
 original project, and the changes after it are in the commits that follow.
@@ -35,3 +36,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+FFmpeg
+
+The macOS app includes FFmpeg 8.1.3 (https://ffmpeg.org) as the separate
+programs ffmpeg and ffprobe in Contents/MacOS. FFmpeg is licensed under the GNU
+Lesser General Public License version 2.1 or later. Its license text is in the
+app at Contents/Resources/licenses/FFmpeg-LGPL-2.1.txt and in this repository
+at backend/licenses/FFmpeg-LGPL-2.1.txt. scripts/build-ffmpeg.sh builds it
+from the unmodified FFmpeg 8.1.3 release with LGPL components only, without
+--enable-gpl, --enable-nonfree or --enable-version3. The FFmpeg 8.1.3 source
+code is available from ffmpeg.org at
+https://ffmpeg.org/releases/ffmpeg-8.1.3.tar.xz.

@@ -1,5 +1,8 @@
 use crate::model::{Effects, Project, id};
-use crate::{archive::Archive, filesystem::atomic_json, indexed_archive, progress::Progress};
+use crate::{
+    archive::Archive, cancellation::Cancellation, filesystem::atomic_json, indexed_archive,
+    progress::Progress,
+};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -56,6 +59,7 @@ pub struct Store {
     pub redo: Vec<Project>,
     pub archive: Option<Archive>,
     pub progress: Progress,
+    pub cancellation: Cancellation,
     pub loudness_cache: Mutex<crate::loudness::LoudnessCache>,
 }
 
@@ -119,6 +123,7 @@ impl Store {
             redo: vec![],
             archive: saved.map(|(_, archive)| archive),
             progress: Progress::default(),
+            cancellation: Cancellation::default(),
             loudness_cache: Mutex::new(Default::default()),
         };
         store.persist()?;

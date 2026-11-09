@@ -5,12 +5,14 @@ mod archive;
 mod audio_devices;
 #[cfg(all(feature = "desktop", target_os = "linux"))]
 mod audio_output;
+mod cancellation;
 mod commands;
 mod controller;
 #[cfg(feature = "desktop")]
 mod desktop;
 mod dsp;
 mod editing;
+mod ffmpeg;
 mod filesystem;
 mod generator;
 #[cfg(test)]
@@ -51,6 +53,11 @@ mod state;
 mod storage;
 #[cfg(test)]
 mod storage_tests;
+mod video_export;
+#[cfg(all(test, target_os = "macos"))]
+mod video_export_ffmpeg_tests;
+#[cfg(test)]
+mod video_export_tests;
 mod video_source;
 
 fn main() -> anyhow::Result<()> {

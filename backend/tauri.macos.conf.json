@@ -7,6 +7,10 @@
     "license": "PolyForm-Strict-1.0.0",
     "shortDescription": "A local voiceover and audio editing studio",
     "icon": ["icons/icon.png"],
+    "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"],
+    "resources": {
+      "licenses/FFmpeg-LGPL-2.1.txt": "licenses/FFmpeg-LGPL-2.1.txt"
+    },
     "macOS": {
       "minimumSystemVersion": "12.0",
       "signingIdentity": "-",

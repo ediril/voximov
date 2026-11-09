@@ -18,6 +18,7 @@ type Props = Pick<
   | 'recordStart'
   | 'busy'
   | 'progress'
+  | 'cancelVideoExport'
   | 'showError'
   | 'importNative'
   | 'videoRef'
@@ -35,6 +36,7 @@ export default function VideoPreview({
   recordStart,
   busy,
   progress,
+  cancelVideoExport,
   showError,
   importNative,
   videoRef,
@@ -94,7 +96,7 @@ export default function VideoPreview({
           toggleFullscreen()
         }}
       >
-        <OperationProgress busy={busy} progress={progress} />
+        <OperationProgress busy={busy} progress={progress} cancelVideoExport={cancelVideoExport} />
         <video
           ref={videoRef}
           src={showingVideo ? videoAsset.url : undefined}

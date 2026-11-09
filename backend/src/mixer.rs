@@ -132,6 +132,10 @@ impl Mixer {
     }
 }
 
+pub fn rendered_frames(duration: f64) -> u64 {
+    (duration * SAMPLE_RATE as f64).ceil() as u64
+}
+
 pub fn render(
     store: &Store,
     destination: &Path,
@@ -157,7 +161,7 @@ pub fn render(
         store.project.duration()
     };
     ensure!(duration > 0., crate::i18n::message("error.noExportAudio"));
-    let total = (duration * SAMPLE_RATE as f64).ceil() as u64;
+    let total = rendered_frames(duration);
     let mut mixer = Mixer::with_selection(store, selected, None)?;
     let mut writer = BufWriter::new(File::create(destination)?);
     let mut encoder = if format == "mp3" {
@@ -171,8 +175,11 @@ pub fn render(
         writer.write_all(&wav_header(total))?;
         None
     };
+    let label = crate::i18n::message("progress.renderMix");
     let mut frame = 0;
     while frame < total {
+        store.cancellation.check()?;
+        store.progress.report(&label, frame as f64 / total as f64);
         let count = (total - frame).min(4096) as usize;
         let (samples, _) = mixer.block(&store.project, frame, count, selected, None)?;
         let pcm: Vec<i16> = samples

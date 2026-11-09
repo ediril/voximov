@@ -122,6 +122,22 @@ pub fn export(format: &str, language: &str, name: &str) -> Result<Option<PathBuf
     }
 }
 
+pub fn video(language: &str, name: &str) -> Result<Option<PathBuf>> {
+    #[cfg(feature = "desktop")]
+    {
+        Ok(rfd::FileDialog::new()
+            .set_title(crate::i18n::text(language, "dialog.exportVideo"))
+            .add_filter("MP4", &["mp4"])
+            .set_file_name(export_filename(name, "mp4", language))
+            .save_file())
+    }
+    #[cfg(not(feature = "desktop"))]
+    {
+        let _ = (language, name);
+        bail!(crate::i18n::message("error.desktopOnly"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::export_filename;
