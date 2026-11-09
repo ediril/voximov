@@ -5,6 +5,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: '*'
         update-types:
@@ -22,6 +23,7 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: '*'
         update-types:
@@ -39,3 +41,4 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
