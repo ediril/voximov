@@ -2,7 +2,38 @@
 
 Open work for Voximov. This project was detached from arconw/simpleVoiceover on 2026-10-30 and no longer syncs with it.
 
-## AI voiceover engine fixes
+## Next: AI-made demo videos
+
+Goal: an AI agent records a feature demo, cuts it, and narrates it end to end through a Voximov CLI, with no human recording. Each step is useful on its own; do them in order.
+
+Every feature works from the app first: recording, marks, cutting idle time and anchoring are buttons and menus in the UI. The CLI drives the same engine commands for AI agents, so the app and the CLI never get separate implementations.
+
+1. **Kokoro inside the engine, no Docker.**
+   - Run the Kokoro-82M ONNX model in the Rust engine with the `ort` crate (ONNX Runtime, CoreML on macOS).
+   - Phonemize with `misaki-rs` with default features off. Do not use espeak-ng: it is GPL-3 and cannot ship in this app.
+   - Download the model and voices on first use, with progress, into the app data folder. Do not bundle them in the dmg.
+   - Unknown words: spell them out first. Per-project pronunciation overrides can come later.
+   - Generate sentence by sentence, for real progress and a Stop that takes effect after the current sentence.
+   - Remove `scripts/kokoro.sh`, `scripts/kokoro.ps1`, the server address setting, the "server not ready" toast and the Docker steps in the README.
+   - This replaces most of the HTTP-related engine fixes below (stalled reads, timeouts, TLS, the voice-list pre-check). Recheck that list afterwards.
+2. **Headless CLI.**
+   - A `voximov` command over the existing `studio_command` layer, with JSON output for agents.
+   - Commands: create and open projects, import media, add script clips, generate, and export audio and video.
+   - Even before recording exists, an agent can narrate a video recorded by hand.
+3. **Window recording with marks.**
+   - Record one window (for example the browser the agent drives) or a display with ScreenCaptureKit (`screencapturekit` crate), with the cursor and optional system audio.
+   - `voximov record start --window <name>`, `record mark <label>`, `record stop`. Marks are timestamped markers on the timeline. In the app: a Record screen button with a window picker, and a shortcut to add a mark while recording.
+   - The CLI asks the running app to record, so the Screen Recording permission belongs to Voximov, not to the terminal or agent.
+   - Not chosen: `screencapture -v` (whole screen only, stops on a key press) and ffmpeg's avfoundation input (needs a rebuilt ffmpeg, whole displays, drops frames).
+4. **Cut idle time and anchor narration to marks.**
+   - Agents pause 5 to 30 seconds between actions. Remove idle stretches using the marks or unchanged frames, keeping some padding around each action. In the app: a Remove idle time action with the padding setting.
+   - Anchor script clips to marks (`script add --at-mark <label>`, or by dropping a script clip onto a mark in the app), so narration stays in sync after cuts.
+
+To consider later: cursor polish (smoothing, click highlights, zoom on clicks), an MCP server over the same commands, and Playwright's own video recording for browser-only demos (no screen permission, but no visible cursor).
+
+## Later
+
+### AI voiceover engine fixes
 
 A three-model review of the voiceover engine (`backend/src/generator.rs`, `speech.rs`, `desktop.rs`, `model.rs`) found these. The UI blocks Play and Record while clips generate, which hides the worst of item 1 for now.
 
@@ -44,7 +75,7 @@ A three-model review of the voiceover engine (`backend/src/generator.rs`, `speec
 
 Smaller items: catch panics in the worker thread, and start the worker only in the desktop build. This also removes the "field `generator` is never read" warning.
 
-## ElevenLabs as a second voice provider
+### ElevenLabs as a second voice provider
 
 Do the engine fixes first. A remote, paid service makes the timeout and cancellation gaps worse.
 
@@ -61,7 +92,7 @@ Decisions needed:
 - One provider for the whole app, or per project.
 - Verify the API details against the ElevenLabs docs before building: `POST /v1/text-to-speech/{voice_id}/stream`, the `xi-api-key` header, PCM output formats, and `GET /v1/voices`.
 
-## Smaller items
+### Smaller items
 
 - Use the native macOS traffic-light window buttons (overlay title bar) and hide the custom Windows-style window controls on macOS.
 - Release workflow: build and attach the macOS `.dmg` (on a macOS runner, as `bin/build-macos` does), since macOS is now the primary platform. It currently builds only the Windows executable.
