@@ -29,6 +29,8 @@ Every feature works from the app first: recording, marks, cutting idle time and 
    - Agents pause 5 to 30 seconds between actions. Remove idle stretches using the marks or unchanged frames, keeping some padding around each action. In the app: a Remove idle time action with the padding setting.
    - Anchor script clips to marks (`script add --at-mark <label>`, or by dropping a script clip onto a mark in the app), so narration stays in sync after cuts.
 
+After step 4: write a tutorial for terminal app demos with asciinema. Record with `asciinema rec` (its `--idle-time-limit` already shortens pauses), turn the `.cast` into a video (`agg` makes a GIF, then ffmpeg converts it to MP4, or replay it in a terminal window and record that window with step 3), then import it into Voximov and add narration. Consider importing `.cast` files directly, using their timed events as marks.
+
 To consider later: cursor polish (smoothing, click highlights, zoom on clicks), an MCP server over the same commands, and Playwright's own video recording for browser-only demos (no screen permission, but no visible cursor).
 
 ## Later
