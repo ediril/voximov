@@ -1,11 +1,18 @@
 use anyhow::{Result, anyhow};
-use misaki_rs::{G2P, Language};
-use std::collections::BTreeSet;
+use misaki_rs::{G2P, Language, MToken, lexicon::PhonemeEntry};
+use regex::Regex;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::LazyLock,
+};
+use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 
 const UNKNOWN: char = '❓';
 const PRIMARY: char = 'ˈ';
 const SECONDARY: char = 'ˌ';
 pub const BUILT_IN: &str = include_str!("pronunciations.txt");
+static LINK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\(([^)]*)\)").expect("link pattern"));
 
 #[derive(Debug, PartialEq)]
 pub struct Pronounced {
@@ -16,90 +23,166 @@ pub struct Pronounced {
 pub struct Pronouncer {
     american: G2P,
     british: Option<G2P>,
-    entries: Vec<(String, String)>,
 }
 
 impl Pronouncer {
     pub fn new() -> Self {
         Self {
-            american: G2P::new(Language::EnglishUS),
+            american: with_built_ins(G2P::new(Language::EnglishUS)),
             british: None,
-            entries: parse_entries(BUILT_IN),
         }
     }
 
     pub fn pronounce(&mut self, text: &str, british: bool) -> Result<Pronounced> {
         let g2p = if british {
             self.british
-                .get_or_insert_with(|| G2P::new(Language::EnglishGB))
+                .get_or_insert_with(|| with_built_ins(G2P::new(Language::EnglishGB)))
         } else {
-            &self.american
+            &mut self.american
         };
-        pronounce(g2p, &self.entries, text)
+        pronounce(g2p, text)
     }
 }
 
-fn phonemize(g2p: &G2P, text: &str) -> Result<(String, Vec<String>)> {
-    let (phonemes, tokens) = g2p.g2p(text).map_err(|error| anyhow!("{error}"))?;
-    let unknown = tokens
-        .into_iter()
-        .filter(|token| {
-            token.text.chars().any(char::is_alphanumeric)
-                && token
-                    .phonemes
-                    .as_deref()
-                    .is_none_or(|phonemes| phonemes.contains(UNKNOWN))
+fn with_built_ins(mut g2p: G2P) -> G2P {
+    let mut words = BTreeMap::new();
+    for (word, phonemes) in parse_entries(BUILT_IN) {
+        add(&mut words, &word, phonemes);
+    }
+    for (word, phonemes) in words {
+        g2p.lexicon
+            .golds
+            .insert(word, PhonemeEntry::Simple(phonemes));
+    }
+    g2p
+}
+
+fn phonemize(
+    g2p: &mut G2P,
+    words: &BTreeMap<String, String>,
+    text: &str,
+) -> Result<(String, Vec<MToken>)> {
+    let replaced: Vec<(String, Option<PhonemeEntry>)> = words
+        .iter()
+        .map(|(word, phonemes)| {
+            let entry = PhonemeEntry::Simple(phonemes.clone());
+            (word.clone(), g2p.lexicon.golds.insert(word.clone(), entry))
         })
-        .map(|token| token.text)
         .collect();
-    Ok((phonemes, unknown))
-}
-
-fn lowercase_link_text(text: &str) -> String {
-    let mut output = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(open) = rest.find('[') {
-        let Some(close) = rest[open..].find("](").map(|index| open + index) else {
-            break;
+    let result = g2p.g2p(text).map_err(|error| anyhow!("{error}"));
+    for (word, previous) in replaced {
+        match previous {
+            Some(entry) => g2p.lexicon.golds.insert(word, entry),
+            None => g2p.lexicon.golds.remove(&word),
         };
-        output.push_str(&rest[..open]);
-        output.push_str(&rest[open..close].to_lowercase());
-        rest = &rest[close..];
     }
-    output.push_str(rest);
-    output
+    result
 }
 
-fn pronounce(g2p: &G2P, entries: &[(String, String)], text: &str) -> Result<Pronounced> {
-    let text = rewrite(&lowercase_link_text(text), |word| {
-        entries
-            .iter()
-            .find(|(key, _)| key.eq_ignore_ascii_case(word))
-            .map(|(_, phonemes)| phonemes.clone())
-    });
-    let (phonemes, unknown) = phonemize(g2p, &text)?;
-    if unknown.is_empty() {
+fn without_brackets(text: &str) -> String {
+    text.replace(['[', ']'], "")
+}
+
+fn inline_pronunciations(text: &str) -> (String, BTreeMap<String, String>) {
+    let mut output = String::with_capacity(text.len());
+    let mut words = BTreeMap::new();
+    let mut copied = 0;
+    for link in LINK.captures_iter(text) {
+        let whole = link.get(0).map_or(0..0, |whole| whole.range());
+        output.push_str(&without_brackets(&text[copied..whole.start]));
+        let word = &link[1];
+        match link[2]
+            .strip_prefix('/')
+            .and_then(|rest| rest.strip_suffix('/'))
+        {
+            Some(phonemes) if !word.contains(char::is_whitespace) => {
+                output.push_str(word);
+                add(&mut words, word, phonemes.to_owned());
+            }
+            _ => output.push_str(&text[whole.clone()]),
+        }
+        copied = whole.end;
+    }
+    output.push_str(&without_brackets(&text[copied..]));
+    (output, words)
+}
+
+const CONTRACTIONS: [(&str, &str); 3] = [("ll", "əl"), ("d", "d"), ("ve", "v")];
+
+fn unresolved(tokens: &[MToken]) -> BTreeSet<String> {
+    tokens
+        .iter()
+        .filter(|token| {
+            token
+                .phonemes
+                .as_deref()
+                .is_none_or(|phonemes| phonemes.contains(UNKNOWN))
+        })
+        .map(|token| token.text.clone())
+        .collect()
+}
+
+fn standalone(g2p: &G2P, word: &str) -> Option<String> {
+    let (phonemes, _) = g2p.g2p(word).ok()?;
+    let phonemes = phonemes.trim();
+    (!phonemes.is_empty() && !phonemes.contains(UNKNOWN)).then(|| phonemes.to_owned())
+}
+
+fn add(words: &mut BTreeMap<String, String>, word: &str, phonemes: String) {
+    words.insert(word.to_owned(), phonemes.clone());
+    words.insert(word.to_lowercase(), phonemes);
+}
+
+fn pronounce(g2p: &mut G2P, text: &str) -> Result<Pronounced> {
+    let (text, mut words) = inline_pronunciations(text);
+    let (phonemes, tokens) = phonemize(g2p, &words, &text)?;
+    let unresolved = unresolved(&tokens);
+    if unresolved.is_empty() {
         return Ok(Pronounced {
-            phonemes,
+            phonemes: phonemes.trim().to_owned(),
             guessed: vec![],
         });
     }
     let mut guessed = BTreeSet::new();
-    let text = rewrite(&text, |word| {
-        if !unknown.iter().any(|token| word.contains(token.as_str())) {
-            return None;
+    let mut say = |word: &str| {
+        let folded = fold(word);
+        standalone(g2p, &folded).or_else(|| {
+            guessed.insert(word.to_owned());
+            compound(g2p, &folded)
+                .or_else(|| acronym(g2p, &folded))
+                .or_else(|| guess(&folded))
+                .or_else(|| spell(g2p, &folded))
+        })
+    };
+    for token in &unresolved {
+        let (stem, suffix) = token.split_once(['\'', '’']).unwrap_or((token, ""));
+        let contraction = CONTRACTIONS
+            .iter()
+            .find(|(written, _)| suffix.eq_ignore_ascii_case(written));
+        match contraction {
+            Some((_, sound)) if stem.chars().all(char::is_alphabetic) => {
+                if let Some(phonemes) = say(stem) {
+                    add(&mut words, token, phonemes + sound);
+                }
+            }
+            _ => {
+                for word in stem.split(|c: char| !c.is_alphabetic()) {
+                    if let Some(phonemes) = (!word.is_empty()).then(|| say(word)).flatten() {
+                        add(&mut words, word, phonemes);
+                    }
+                }
+            }
         }
-        let phonemes = compound(g2p, word)
-            .or_else(|| acronym(g2p, word))
-            .or_else(|| guess(word))?;
-        guessed.insert(word.to_owned());
-        Some(phonemes)
-    });
-    let (phonemes, _) = phonemize(g2p, &text)?;
+    }
+    let (phonemes, _) = phonemize(g2p, &words, &text)?;
     Ok(Pronounced {
         phonemes: phonemes.replace(UNKNOWN, "").trim().to_owned(),
         guessed: guessed.into_iter().collect(),
     })
+}
+
+fn fold(word: &str) -> String {
+    word.nfd().filter(|c| !is_combining_mark(*c)).collect()
 }
 
 fn known(g2p: &G2P, word: &str) -> Option<String> {
@@ -160,12 +243,16 @@ fn acronym(g2p: &G2P, word: &str) -> Option<String> {
     if !letters || !((capitals && word.len() <= 6) || (vowelless && word.len() <= 5)) {
         return None;
     }
+    spell(g2p, word)
+}
+
+fn spell(g2p: &G2P, word: &str) -> Option<String> {
     let spelled: Vec<String> = word
         .to_lowercase()
         .chars()
         .map(|letter| known(g2p, &letter.to_uppercase().to_string()))
         .collect::<Option<_>>()?;
-    let last = spelled.len() - 1;
+    let last = spelled.len().checked_sub(1)?;
     Some(
         spelled
             .iter()
@@ -191,55 +278,6 @@ pub fn parse_entries(source: &str) -> Vec<(String, String)> {
                 .then(|| Some((word.to_owned(), respell(sounds.trim())?)))?
         })
         .collect()
-}
-
-fn word_spans(text: &str) -> Vec<(usize, usize)> {
-    let inner = |c: char| c.is_alphanumeric() || "'’.+#-_".contains(c);
-    let trailing = |c: char| "'’.-_".contains(c);
-    let mut spans = vec![];
-    let mut chars = text.char_indices().peekable();
-    let mut link_depth = 0;
-    while let Some((start, c)) = chars.next() {
-        match c {
-            '[' => link_depth += 1,
-            ')' if link_depth > 0 => link_depth -= 1,
-            _ => {}
-        }
-        if link_depth > 0 || !c.is_alphanumeric() {
-            continue;
-        }
-        let mut end = start + c.len_utf8();
-        while let Some(&(index, next)) = chars.peek() {
-            if !inner(next) {
-                break;
-            }
-            end = index + next.len_utf8();
-            chars.next();
-        }
-        while text[start..end].ends_with(trailing) {
-            end -= text[start..end]
-                .chars()
-                .next_back()
-                .map_or(1, char::len_utf8);
-        }
-        spans.push((start, end));
-    }
-    spans
-}
-
-fn rewrite(text: &str, mut replacement: impl FnMut(&str) -> Option<String>) -> String {
-    let mut output = String::with_capacity(text.len());
-    let mut copied = 0;
-    for (start, end) in word_spans(text) {
-        let word = &text[start..end];
-        if let Some(phonemes) = replacement(word) {
-            output.push_str(&text[copied..start]);
-            output.push_str(&format!("[{}](/{phonemes}/)", word.to_lowercase()));
-            copied = end;
-        }
-    }
-    output.push_str(&text[copied..]);
-    output
 }
 
 const RESPELLING: [(&str, &str, &str); 52] = [
@@ -309,7 +347,13 @@ fn insert_stress(phonemes: &str, mark: char) -> String {
 fn respell_syllable(syllable: &str, stressed: bool) -> Option<String> {
     let mut rest = syllable;
     let mut phonemes = String::new();
+    let mut previous = None;
     while let Some(first) = rest.chars().next() {
+        if previous == Some(first) && "bdfhklmnpqstvwz".contains(first) {
+            rest = &rest[1..];
+            continue;
+        }
+        previous = Some(first);
         if first == 'y' {
             let vowel_follows = rest[1..].starts_with(['a', 'e', 'i', 'o', 'u']);
             phonemes.push_str(if vowel_follows { "j" } else { "I" });
@@ -526,7 +570,7 @@ pub fn sentence_chunks(phonemes: &str, limit: usize) -> Vec<String> {
     chunks
         .into_iter()
         .map(|chunk| chunk.trim().to_owned())
-        .filter(|chunk| chunk.chars().any(|c| VOWEL_SOUNDS.contains(c)))
+        .filter(|chunk| chunk.chars().any(char::is_alphabetic))
         .flat_map(|chunk| split_long(&chunk, limit))
         .collect()
 }

@@ -176,6 +176,25 @@ fn script_clips_go_on_any_audio_track_but_not_the_video_track() -> Result<()> {
 }
 
 #[test]
+fn track_speeds_reach_the_interface_exactly_as_chosen() -> Result<()> {
+    let temporary = tempfile::tempdir()?;
+    let mut store = new_store(temporary.path())?;
+    let track_id = store.project.tracks[1].id.clone();
+    for speed in [0.8, 0.9, 1.1, 1.2, 1.3] {
+        run(
+            &mut store,
+            json!({"command":"track_patch","trackId":track_id,"patch":{"speechSpeed":speed}}),
+        )?;
+        let snapshot = commands::snapshot(&store);
+        assert_eq!(
+            snapshot["project"]["tracks"][1]["speechSpeed"].as_f64(),
+            Some(speed)
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn projects_saved_with_a_voice_track_open_with_plain_audio_tracks() -> Result<()> {
     let temporary = tempfile::tempdir()?;
     let store = new_store(temporary.path())?;

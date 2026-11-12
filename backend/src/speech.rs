@@ -23,7 +23,7 @@ pub trait Speaker: Send {
         &mut self,
         text: &str,
         voice: &str,
-        speed: f32,
+        speed: f64,
         report: &mut dyn FnMut(Stage, f64) -> bool,
     ) -> Result<Option<Speech>>;
 }
@@ -51,7 +51,7 @@ impl Speaker for LocalSpeaker {
         &mut self,
         text: &str,
         voice: &str,
-        speed: f32,
+        speed: f64,
         report: &mut dyn FnMut(Stage, f64) -> bool,
     ) -> Result<Option<Speech>> {
         let files = voice_model::manifest();
@@ -79,7 +79,7 @@ impl Speaker for LocalSpeaker {
             empty => empty.insert(Kokoro::load(&self.directory)?),
         };
         Ok(kokoro
-            .speak(&sentences, voice, speed, |progress| {
+            .speak(&sentences, voice, speed as f32, |progress| {
                 report(Stage::Generating, progress)
             })?
             .map(|samples| Speech {

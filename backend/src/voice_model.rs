@@ -1,8 +1,8 @@
 use anyhow::{Context, Result, bail, ensure};
 use sha2::{Digest, Sha256};
 use std::{
-    fs::{self, File},
-    io::{Read, Write},
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -27,6 +27,7 @@ fn file(path: impl Into<String>, size: u64, sha256: &str) -> ModelFile {
 }
 
 const VOICE_SIZE: u64 = 522_240;
+const CHUNK_BYTES: u64 = 4 * 1024 * 1024;
 
 pub const VOICES: [(&str, &str); 28] = [
     (
@@ -199,7 +200,7 @@ pub fn install(
     let agent = ureq::Agent::new_with_config(
         ureq::Agent::config_builder()
             .timeout_connect(Some(Duration::from_secs(10)))
-            .timeout_recv_body(Some(Duration::from_secs(30)))
+            .timeout_global(Some(Duration::from_secs(60)))
             .http_status_as_error(false)
             .build(),
     );
@@ -220,6 +221,22 @@ pub fn install(
     Ok(progress(1.))
 }
 
+fn download_failed() -> anyhow::Error {
+    anyhow::anyhow!(crate::i18n::message("error.voiceModelDownload"))
+}
+
+fn resume(partial: &Path, size: u64, hasher: &mut Sha256) -> Result<u64> {
+    match File::open(partial) {
+        Ok(mut existing) if existing.metadata()?.len() <= size => {
+            Ok(io::copy(&mut existing, hasher)?)
+        }
+        _ => {
+            let _ = fs::remove_file(partial);
+            Ok(0)
+        }
+    }
+}
+
 fn download(
     agent: &ureq::Agent,
     source: &str,
@@ -227,58 +244,55 @@ fn download(
     target: &Path,
     mut progress: impl FnMut(u64) -> bool,
 ) -> Result<bool> {
-    let failed = || anyhow::anyhow!(crate::i18n::message("error.voiceModelDownload"));
     fs::create_dir_all(target.parent().context("model file has no folder")?)?;
     let partial = target.with_extension("part");
-    let response = agent
-        .get(format!("{source}/{}", file.path))
-        .call()
-        .map_err(|_| failed())?;
-    ensure!(response.status().is_success(), failed());
-    let mut reader = response
-        .into_body()
-        .into_with_config()
-        .limit(file.size + 1)
-        .reader();
-    let mut output = File::create(&partial)?;
     let mut hasher = Sha256::new();
+    let mut received = resume(&partial, file.size, &mut hasher)?;
+    let mut output = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&partial)?;
+    let url = format!("{source}/{}", file.path);
     let mut buffer = vec![0u8; 256 * 1024];
-    let mut received = 0u64;
-    let outcome = (|| {
+    while received < file.size {
+        let end = (received + CHUNK_BYTES).min(file.size);
+        let response = agent
+            .get(&url)
+            .header("Range", format!("bytes={received}-{}", end - 1))
+            .call()
+            .map_err(|_| download_failed())?;
+        ensure!(response.status() == 206, download_failed());
+        let mut reader = response
+            .into_body()
+            .into_with_config()
+            .limit(end - received + 1)
+            .reader();
         loop {
-            let read = reader.read(&mut buffer).map_err(|_| failed())?;
+            let read = reader.read(&mut buffer).map_err(|_| download_failed())?;
             if read == 0 {
                 break;
             }
-            received += read as u64;
-            ensure!(received <= file.size, failed());
+            ensure!(received + read as u64 <= end, download_failed());
             hasher.update(&buffer[..read]);
             output.write_all(&buffer[..read])?;
+            received += read as u64;
             if !progress(received) {
                 return Ok(false);
             }
         }
-        let digest: String = hasher
-            .clone()
-            .finalize()
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect();
-        if received != file.size || digest != file.sha256 {
-            bail!(failed());
-        }
-        output.sync_all()?;
-        Ok(true)
-    })();
-    drop(output);
-    match outcome {
-        Ok(true) => {
-            fs::rename(&partial, target)?;
-            Ok(true)
-        }
-        other => {
-            let _ = fs::remove_file(&partial);
-            other
-        }
+        ensure!(received == end, download_failed());
     }
+    output.sync_all()?;
+    drop(output);
+    let digest: String = hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    if digest != file.sha256 {
+        let _ = fs::remove_file(&partial);
+        bail!(download_failed());
+    }
+    fs::rename(&partial, target)?;
+    Ok(true)
 }

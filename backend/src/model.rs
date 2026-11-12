@@ -119,12 +119,12 @@ pub struct Take {
     pub text: String,
     pub voice: String,
     #[serde(default = "normal_speed")]
-    pub speed: f32,
+    pub speed: f64,
 }
 
-pub const SPEECH_SPEEDS: std::ops::RangeInclusive<f32> = 0.5..=2.;
+pub const SPEECH_SPEEDS: std::ops::RangeInclusive<f64> = 0.5..=2.;
 
-fn normal_speed() -> f32 {
+fn normal_speed() -> f64 {
     1.
 }
 
@@ -156,7 +156,7 @@ pub struct Track {
     pub pan: f32,
     pub effects: Effects,
     #[serde(default = "normal_speed")]
-    pub speech_speed: f32,
+    pub speech_speed: f64,
     pub clips: Vec<Clip>,
 }
 impl Track {

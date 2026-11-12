@@ -19,7 +19,7 @@ use std::{
 
 #[derive(Default)]
 struct FakeSpeaker {
-    requests: Arc<Mutex<Vec<(String, String, f32)>>>,
+    requests: Arc<Mutex<Vec<(String, String, f64)>>>,
     sentence_delay: Duration,
     sentences: usize,
 }
@@ -29,7 +29,7 @@ impl Speaker for FakeSpeaker {
         &mut self,
         text: &str,
         voice: &str,
-        speed: f32,
+        speed: f64,
         report: &mut dyn FnMut(Stage, f64) -> bool,
     ) -> Result<Option<Speech>> {
         self.requests
@@ -91,7 +91,7 @@ fn script(store: &Arc<Mutex<Store>>, text: &str) -> Result<Job> {
         &mut store,
         &json!({"command":"script_patch","trackId":track_id,"clipId":clip_id,"text":text}),
     )?;
-    Ok(Job { track_id, clip_id })
+    Ok(Job { clip_id })
 }
 
 fn wait_for(events: &Receiver<GenerationEvent>, state: GenerationState) -> Vec<GenerationEvent> {
@@ -171,9 +171,10 @@ fn regenerating_replaces_the_previous_take_with_the_project_voice_and_track_spee
         &mut store.lock().unwrap(),
         &json!({"command":"project_voice","voice":"am_michael"}),
     )?;
+    let track_id = store.lock().unwrap().project.tracks[1].id.clone();
     commands::execute(
         &mut store.lock().unwrap(),
-        &json!({"command":"track_patch","trackId":job.track_id,"patch":{"speechSpeed":1.25}}),
+        &json!({"command":"track_patch","trackId":track_id,"patch":{"speechSpeed":1.25}}),
     )?;
     generator.enqueue([job]);
     wait_for(&events, GenerationState::Done);
@@ -231,6 +232,39 @@ fn cancelling_stops_generation_and_clears_the_queue() -> Result<()> {
     );
     assert!(store.project.assets.is_empty());
     assert_eq!(requests.lock().unwrap().len(), 1);
+    Ok(())
+}
+
+#[test]
+fn a_clip_moved_to_another_track_while_generating_keeps_its_take() -> Result<()> {
+    let speaker = FakeSpeaker {
+        sentences: 10,
+        sentence_delay: Duration::from_millis(50),
+        ..Default::default()
+    };
+    let (_temporary, store, generator, events) = studio(speaker)?;
+    let job = script(&store, "Moving while speaking.")?;
+    generator.enqueue([job.clone()]);
+    loop {
+        let event = events.recv_timeout(Duration::from_secs(10)).unwrap();
+        if event.state == GenerationState::Generating && event.progress > 0. {
+            break;
+        }
+    }
+    {
+        let mut store = store.lock().unwrap();
+        let track_id = store.project.tracks[1].id.clone();
+        commands::execute(
+            &mut store,
+            &json!({"command":"regions_edit","regions":[{"trackId":track_id,"clipId":job.clip_id,"from":0.,"to":4.}],"delta":0.,"trackOffset":1}),
+        )?;
+    }
+    wait_for(&events, GenerationState::Done);
+    let store = store.lock().unwrap();
+    let moved = &store.project.tracks[2].clips[0];
+    assert_eq!(moved.id, job.clip_id);
+    assert!(moved.script.as_ref().unwrap().take.is_some());
+    assert!(moved.asset_id.is_some());
     Ok(())
 }
 

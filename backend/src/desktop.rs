@@ -104,7 +104,6 @@ async fn speech_command(
                 .flatten()
                 .filter_map(|clip| {
                     Some(Job {
-                        track_id: clip["trackId"].as_str()?.into(),
                         clip_id: clip["clipId"].as_str()?.into(),
                     })
                 }),

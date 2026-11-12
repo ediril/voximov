@@ -21,6 +21,7 @@ fn sounds_like_spellings_become_exact_phonemes() {
     assert_eq!(respell("VOX-ih-mov").as_deref(), Some("vˈɑksɪmɑv"));
     assert_eq!(respell("koo-ber-NET-eez").as_deref(), Some("kubəɹnˈɛtiz"));
     assert_eq!(respell("TOW-ree").as_deref(), Some("tˈWɹi"));
+    assert_eq!(respell("NOHD-jay-ess").as_deref(), Some("nˈOdʤAɛs"));
     assert_eq!(respell("vox ih mov").as_deref(), Some("vˈɑksɪmɑv"));
     assert_eq!(respell("9000"), None);
     assert_eq!(respell(""), None);
@@ -63,12 +64,24 @@ fn words_missing_from_the_dictionary_are_spoken_and_reported() {
 fn built_in_words_override_the_dictionary_without_being_reported() {
     let mut pronouncer = Pronouncer::new();
     let result = pronouncer
-        .pronounce("Voximov exports JSON for Kubernetes.", false)
+        .pronounce(
+            "Voximov exports JSON for Kubernetes, async regex and Node.js with PyTorch.",
+            false,
+        )
         .unwrap();
     assert_eq!(result.guessed, Vec::<String>::new());
     assert!(result.phonemes.starts_with("vˈɑksɪmɑv"));
-    assert!(result.phonemes.contains("ʤˈAsən"));
-    assert!(result.phonemes.contains("kubəɹnˈɛtiz"));
+    for phonemes in [
+        "ʤˈAsən",
+        "kubəɹnˈɛtiz",
+        "ˈAsɪŋk",
+        "ɹˈɛʤɛks",
+        "nˈOdʤAɛs",
+        "pˈItɔɹʧ",
+    ] {
+        assert!(result.phonemes.contains(phonemes), "{phonemes} missing");
+    }
+    assert_eq!(result.phonemes.matches("nˈOd").count(), 1);
 }
 
 #[test]
@@ -76,13 +89,54 @@ fn inline_pronunciations_are_kept_as_written() {
     let mut pronouncer = Pronouncer::new();
     let result = pronouncer
         .pronounce(
-            "Say [Zorblax](/zˈɔɹbləks/) and [JSON](/ʤˈAsən/) twice.",
+            "Say [Zorblax](/zˈɔɹbləks/), [JSON](/ʤˈAsən/) and [tomato](/təmˈɑtO/) twice.",
             false,
         )
         .unwrap();
     assert!(result.phonemes.contains("zˈɔɹbləks"));
     assert!(result.phonemes.contains("ʤˈAsən"));
+    assert!(result.phonemes.contains("təmˈɑtO"));
     assert_eq!(result.guessed, Vec::<String>::new());
+}
+
+#[test]
+fn no_word_is_silently_dropped() {
+    let mut pronouncer = Pronouncer::new();
+    for (text, expected, guessed) in [
+        (
+            "Voximov's editor is Zorblax-based.",
+            vec!["vˈɑksɪmɑvz", "zˈɔɹbl", "bˌAst"],
+            vec!["Zorblax"],
+        ),
+        ("Talk to il-lilly.", vec!["ɪllˈɪli"], vec!["il"]),
+        (
+            "Café jalapeño résumé.",
+            vec!["kæfˈA", "ʤˈAlApinO", "ɹəzˈum"],
+            vec!["jalapeño"],
+        ),
+        (
+            "Press [Enter] and Zorblax starts.",
+            vec!["pɹˈɛs ˈɛntəɹ ænd zˈɔɹbl"],
+            vec!["Zorblax"],
+        ),
+        ("The dog'll ship.", vec!["dˈɔɡəl ʃˈɪp"], vec![]),
+        (
+            "This device is thought through.",
+            vec!["dəvˈIs", "θˈɔt"],
+            vec![],
+        ),
+    ] {
+        let result = pronouncer.pronounce(text, false).unwrap();
+        for phonemes in expected {
+            assert!(
+                result.phonemes.contains(phonemes),
+                "{text} gave {} without {phonemes}",
+                result.phonemes
+            );
+        }
+        assert_eq!(result.guessed, guessed, "{text}");
+        assert_eq!(unspeakable(&result.phonemes), "", "{text}");
+    }
 }
 
 #[test]
@@ -91,6 +145,8 @@ fn british_voices_use_the_british_dictionary() {
     let american = pronouncer.pronounce("tomato", false).unwrap();
     let british = pronouncer.pronounce("tomato", true).unwrap();
     assert_ne!(american.phonemes, british.phonemes);
+    let british = pronouncer.pronounce("Ready? No. Stop.", true).unwrap();
+    assert_eq!(sentence_chunks(&british.phonemes, MAX_PHONEMES).len(), 3);
 }
 
 #[test]

@@ -19,7 +19,6 @@ use std::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Job {
-    pub track_id: String,
     pub clip_id: String,
 }
 
@@ -157,13 +156,19 @@ fn process(store: &Mutex<Store>, shared: &Shared, speaker: &mut dyn Speaker, job
     }
 }
 
-fn find<'a>(project: &'a mut Project, job: &Job) -> Result<&'a mut Clip> {
+fn find<'a>(project: &'a mut Project, job: &Job) -> Result<(&'a mut Clip, f64)> {
     project
         .tracks
         .iter_mut()
-        .find(|track| track.id == job.track_id)
-        .and_then(|track| track.clips.iter_mut().find(|clip| clip.id == job.clip_id))
-        .filter(|clip| clip.script.is_some())
+        .find_map(|track| {
+            let speed = track.speech_speed;
+            track
+                .clips
+                .iter_mut()
+                .find(|clip| clip.id == job.clip_id)
+                .map(|clip| (clip, speed))
+        })
+        .filter(|(clip, _)| clip.script.is_some())
         .context(crate::i18n::message("error.clipMissing"))
 }
 
@@ -182,13 +187,8 @@ fn generate(
             .voice
             .clone()
             .unwrap_or_else(|| store.config.speech_voice.clone());
-        let speed = store
-            .project
-            .tracks
-            .iter()
-            .find(|track| track.id == job.track_id)
-            .map_or(1., |track| track.speech_speed);
-        let text = find(&mut store.project, job)?
+        let (clip, speed) = find(&mut store.project, job)?;
+        let text = clip
             .script
             .as_ref()
             .map(|script| script.text.clone())
@@ -246,7 +246,7 @@ fn attach(store: &Mutex<Store>, job: &Job, file: &Path, take: Take) -> Result<()
             .context(crate::i18n::message("error.noDecodableAudio"))?
             .clone();
         let mut project = store.project.clone();
-        let clip = find(&mut project, job)?;
+        let (clip, _) = find(&mut project, job)?;
         let previous = clip.asset_id.replace(asset.id.clone());
         if let Some(script) = clip.script.as_mut() {
             script.take = Some(take);
