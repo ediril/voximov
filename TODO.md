@@ -8,26 +8,24 @@ Goal: an AI agent records a feature demo, cuts it, and narrates it end to end th
 
 Every feature works from the app first: recording, marks, cutting idle time and anchoring are buttons and menus in the UI. The CLI drives the same engine commands for AI agents, so the app and the CLI never get separate implementations.
 
-1. **Kokoro inside the engine, no Docker.**
-   - Run the Kokoro-82M ONNX model in the Rust engine with the `ort` crate (ONNX Runtime, CoreML on macOS).
-   - Phonemize with `misaki-rs` with default features off. Do not use espeak-ng: it is GPL-3 and cannot ship in this app.
-   - Download the model and voices on first use, with progress, into the app data folder. Do not bundle them in the dmg.
-   - Unknown words: spell them out first. Per-project pronunciation overrides can come later.
-   - Generate sentence by sentence, for real progress and a Stop that takes effect after the current sentence.
-   - Remove `scripts/kokoro.sh`, `scripts/kokoro.ps1`, the server address setting, the "server not ready" toast and the Docker steps in the README.
-   - This replaces most of the HTTP-related engine fixes below (stalled reads, timeouts, TLS, the voice-list pre-check). Recheck that list afterwards.
+1. **Kokoro inside the engine, no Docker.** Done: the engine runs Kokoro with `ort` and phonemizes with `misaki-rs` (no espeak-ng, which is GPL-3), downloads the model on first use with checksums, generates sentence by sentence, speaks unknown words with compound splitting, acronym spelling and letter-to-sound guesses, and reports the guessed words. Built-in tech words live in `backend/src/pronunciations.txt`. Remaining:
+   - Your own pronunciations in Settings and per project, in the same sounds-like format (`Zorblax = ZOR-blaks`). The CLI adds entries the same way. Offer to add a guessed word from the "Guessed how to say" notice.
+   - Recheck the engine fixes below: the HTTP items (stalled reads, timeouts, TLS, the voice-list pre-check) no longer apply.
 2. **Headless CLI.**
    - A `voximov` command over the existing `studio_command` layer, with JSON output for agents.
    - Commands: create and open projects, import media, add script clips, generate, and export audio and video.
    - Even before recording exists, an agent can narrate a video recorded by hand.
+   - Also accept one JSON file describing a whole edit (`voximov run edit.json`), so an agent can write, check and rerun it in one call. Add a `probe` command that prints a media file's streams, duration and frame timing as JSON.
 3. **Window recording with marks.**
    - Record one window (for example the browser the agent drives) or a display with ScreenCaptureKit (`screencapturekit` crate), with the cursor and optional system audio.
    - `voximov record start --window <name>`, `record mark <label>`, `record stop`. Marks are timestamped markers on the timeline. In the app: a Record screen button with a window picker, and a shortcut to add a mark while recording.
    - The CLI asks the running app to record, so the Screen Recording permission belongs to Voximov, not to the terminal or agent.
    - Not chosen: `screencapture -v` (whole screen only, stops on a key press) and ffmpeg's avfoundation input (needs a rebuilt ffmpeg, whole displays, drops frames).
+   - Screen recordings have a variable frame rate (ScreenCaptureKit sends frames only when the screen changes). Store real per-frame timestamps and keyframes for such assets, from an ffprobe packet scan, and use them for frame snapping and the frames and timecode display instead of one nominal rate.
 4. **Cut idle time and anchor narration to marks.**
    - Agents pause 5 to 30 seconds between actions. Remove idle stretches using the marks or unchanged frames, keeping some padding around each action. In the app: a Remove idle time action with the padding setting.
    - Anchor script clips to marks (`script add --at-mark <label>`, or by dropping a script clip onto a mark in the app), so narration stays in sync after cuts.
+   - Faster export of long recordings with few cuts: stream-copy untouched stretches and re-encode only from each cut to the next keyframe. Fall back to a full re-encode when sources differ in codec, size or rate.
 
 After step 4: write a tutorial for terminal app demos with asciinema. Record with `asciinema rec` (its `--idle-time-limit` already shortens pauses), turn the `.cast` into a video (`agg` makes a GIF, then ffmpeg converts it to MP4, or replay it in a terminal window and record that window with step 3), then import it into Voximov and add narration. Consider importing `.cast` files directly, using their timed events as marks.
 
@@ -98,8 +96,6 @@ Decisions needed:
 
 - Use the native macOS traffic-light window buttons (overlay title bar) and hide the custom Windows-style window controls on macOS.
 - Release workflow: build and attach the macOS `.dmg` (on a macOS runner, as `bin/build-macos` does), since macOS is now the primary platform. It currently builds only the Windows executable.
-- Untested: `scripts/kokoro.ps1` on Windows.
-- Script progress is estimated from elapsed time. Kokoro-FastAPI sends each clip's audio in one burst at the end.
 - A webview reload during generation re-enables Play and Record while the engine may still be working.
 - Partially selecting a script clip still reaches the engine and shows its error instead of being prevented in the UI.
 - Now possible without sync conflicts: shorten the README inherited from upstream, and move the `bin/` scripts into `scripts/`.

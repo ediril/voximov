@@ -85,13 +85,7 @@ async fn studio_command(
     result.map_err(|e| e.to_string())
 }
 
-const SPEECH_HELP: &str = "https://github.com/ediril/voximov#ai-voiceover";
-const SPEECH_COMMANDS: [&str; 4] = [
-    "script_generate",
-    "script_cancel",
-    "speech_voices",
-    "speech_help",
-];
+const SPEECH_COMMANDS: [&str; 2] = ["script_generate", "script_cancel"];
 
 async fn speech_command(
     studio: &StudioState,
@@ -100,33 +94,11 @@ async fn speech_command(
     if !SPEECH_COMMANDS.contains(&request["command"].as_str()?) {
         return None;
     }
-    let studio = studio.clone();
-    let request = request.clone();
-    Some(
-        tauri::async_runtime::spawn_blocking(move || speech_request(&studio, &request))
-            .await
-            .map_err(|error| error.to_string())
-            .and_then(|result| result.map_err(|error| error.to_string())),
-    )
-}
-
-fn speech_request(studio: &StudioState, request: &Value) -> Result<Value> {
-    match request["command"].as_str().unwrap_or_default() {
-        "script_cancel" => studio.generator.cancel(),
-        "speech_help" => open_in_browser(SPEECH_HELP)?,
-        command => {
-            let url = studio
-                .store
-                .lock()
-                .map_err(|_| anyhow::anyhow!(crate::i18n::message("error.storeUnavailable")))?
-                .config
-                .speech_url
-                .clone();
-            let voices = crate::speech::voices(&url)?;
-            if command == "speech_voices" {
-                return Ok(json!({ "voices": voices }));
-            }
-            let jobs = request["clips"]
+    if request["command"] == "script_cancel" {
+        studio.generator.cancel();
+    } else {
+        studio.generator.enqueue(
+            request["clips"]
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -135,22 +107,10 @@ fn speech_request(studio: &StudioState, request: &Value) -> Result<Value> {
                         track_id: clip["trackId"].as_str()?.into(),
                         clip_id: clip["clipId"].as_str()?.into(),
                     })
-                });
-            studio.generator.enqueue(jobs);
-        }
+                }),
+        );
     }
-    Ok(json!({}))
-}
-
-fn open_in_browser(url: &str) -> Result<()> {
-    #[cfg(target_os = "macos")]
-    let mut command = std::process::Command::new("open");
-    #[cfg(target_os = "windows")]
-    let mut command = std::process::Command::new("explorer");
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = std::process::Command::new("xdg-open");
-    command.arg(url).spawn()?;
-    Ok(())
+    Some(Ok(json!({})))
 }
 
 #[tauri::command]

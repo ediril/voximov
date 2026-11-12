@@ -256,7 +256,7 @@ fn run(store: &mut Store, value: &Value) -> Result<Value> {
             store.set_time_display(serde_json::from_value(value["timeDisplay"].clone())?)?;
         }
         "speech_preferences_patch" => {
-            store.set_speech(text(value, "url")?, text(value, "voice")?)?;
+            store.set_speech_voice(text(value, "voice")?)?;
         }
         "audio_preferences_patch" => {
             store.set_audio_devices(text(value, "inputDevice")?, text(value, "outputDevice")?)?;

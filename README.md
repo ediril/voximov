@@ -31,7 +31,7 @@ stays untouched.
 - Export a single track or the whole mix as WAV or MP3; pick the format in the save dialog.
 - On macOS, export the edited video with the full mix as an MP4, encoded on the Mac's hardware
   H.264 encoder. Gaps between video clips become black frames.
-- AI voiceover from a written script with Kokoro, running locally.
+- AI voiceover from a written script with Kokoro, running inside the app.
 - One project file (`.voximov`) that holds sources, takes and edits, with crash-safe saves.
   Projects saved as `.justspeak` files by earlier versions still open.
 - 13 interface languages.
@@ -80,23 +80,11 @@ GitHub-hosted runners. The app needs the WebView2 Runtime.
 ## AI voiceover
 
 Voximov can turn a written script into speech with
-[Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), an open-source voice model. The app talks to
-[Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI), a server that runs in Docker on your
-own computer, so your script stays on your machine.
-
-Install and start Docker (for example Docker Desktop or Rancher Desktop), then manage Kokoro with
-the script in this repository:
-
-```console
-scripts/kokoro.sh start
-```
-
-The first `start` downloads about 1.5 GB. Kokoro then starts with Docker and listens only on this
-computer at `http://localhost:8880`. The script also has `status`, `stop`, `reset` and `remove`
-commands. `status` checks Docker, the container and the server. `reset` recreates the container without a new download.
-`remove` deletes the container; `remove --all` also deletes the image. Run `scripts/kokoro.sh help`
-for settings such as `KOKORO_PORT`, or `KOKORO_IMAGE` for the NVIDIA GPU image. On Windows, use
-`powershell -ExecutionPolicy Bypass -File scripts\kokoro.ps1` with the same commands.
+[Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), an open-source voice model that runs inside
+the app on your own computer, so your script stays on your machine. There is nothing to install.
+The first time you generate speech, Voximov downloads the voice model (about 100 MB) from Hugging
+Face into `~/.voximov/voice-model/` and checks every file against a fixed checksum. After that,
+speech works offline.
 
 To write a voiceover:
 
@@ -107,8 +95,13 @@ To write a voiceover:
    background.
 
 If the speech is longer than the clip, the rest appears as a faded overflow; drag the clip's right
-edge or double-click the overflow to fit it. Choose the voice in the **Script** tab and the Kokoro
-address in **Settings**. If the app reports that Kokoro isn't ready, run `scripts/kokoro.sh status`.
+edge or double-click the overflow to fit it. Choose the voice for the project in the **Script** tab
+and the default voice in **Settings**.
+
+Voximov knows most English words and common tech terms such as Kubernetes, npm and JSON. For any
+other word it guesses the pronunciation and tells you which words it guessed, so you can listen
+and check them. To set an exact pronunciation, write the word with its phonemes in the script, for
+example `[Voximov](/vˈɑksɪmɑv/)`.
 
 ## Keyboard shortcuts
 

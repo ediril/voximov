@@ -2,10 +2,8 @@ import { t, type TranslationKey } from '../i18n'
 import { RefreshCw, Square, WandSparkles } from 'lucide-react'
 import { formatTime } from '../types'
 import type { StudioController } from '../useStudio'
-import { useVoiceList } from '../hooks/useVoiceList'
 import { scriptRowAction, type ScriptClipState, type ScriptRowAction } from '../timeline/script'
-import { voiceName } from '../voices'
-import SpeechProblem from './SpeechProblem'
+import { voiceName, voices } from '../voices'
 import VoiceSelect from './VoiceSelect'
 
 type Props = Pick<
@@ -19,9 +17,6 @@ type Props = Pick<
   | 'projectVoice'
   | 'defaultVoice'
   | 'changeProjectVoice'
-  | 'loadVoices'
-  | 'openSpeechHelp'
-  | 'showSpeechError'
   | 'seek'
   | 'setSelectedTrackId'
   | 'setSelectedClipId'
@@ -34,6 +29,7 @@ type Props = Pick<
 const statusLabels: Record<ScriptClipState, TranslationKey> = {
   draft: 'script.statusDraft',
   queued: 'script.queued',
+  downloading: 'script.statusDownloading',
   generating: 'script.statusGenerating',
   fits: 'script.statusFits',
   stale: 'script.statusStale',
@@ -68,9 +64,6 @@ export default function ScriptPanel({
   projectVoice,
   defaultVoice,
   changeProjectVoice,
-  loadVoices,
-  openSpeechHelp,
-  showSpeechError,
   seek,
   setSelectedTrackId,
   setSelectedClipId,
@@ -79,27 +72,21 @@ export default function ScriptPanel({
   busy,
   operationPending,
 }: Props) {
-  const [voiceList] = useVoiceList(loadVoices, showSpeechError)
   const blocked = recording || operationPending
-  const listed = voiceList.status === 'ready' ? voiceList.voices : []
   const generationBlocked = blocked || !!busy
   return (
     <div className="script-panel">
       <div className="panel-heading">
         <span className="eyebrow">{t('script.voiceHeading')}</span>
       </div>
-      {voiceList.status === 'failed' ? (
-        <SpeechProblem error={voiceList.error} onHelp={openSpeechHelp} />
-      ) : (
-        <VoiceSelect
-          label={t('script.voice')}
-          value={projectVoice ?? ''}
-          voices={listed}
-          disabled={voiceList.status !== 'ready' || blocked}
-          defaultLabel={t('script.voiceDefault', { voice: voiceName(defaultVoice) })}
-          onChange={changeProjectVoice}
-        />
-      )}
+      <VoiceSelect
+        label={t('script.voice')}
+        value={projectVoice ?? ''}
+        voices={voices}
+        disabled={blocked}
+        defaultLabel={t('script.voiceDefault', { voice: voiceName(defaultVoice) })}
+        onChange={changeProjectVoice}
+      />
       <div className="script-actions">
         <button
           className="button accent"

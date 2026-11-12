@@ -23,7 +23,7 @@ import { useOperationIndicator } from './hooks/useOperationIndicator'
 import { useTransientMessage } from './hooks/useTransientMessage'
 import { useScriptGeneration } from './hooks/useScriptGeneration'
 import { useScriptClips } from './hooks/useScriptClips'
-import { isSpeechUnavailable, speechNoticeDuration } from './timeline/script'
+import { speechNoticeDuration } from './timeline/script'
 import type { TimelineTool } from './timeline/types'
 import { emptyAudioDevices } from './audio/devices'
 import { hasExportableVideo } from './timeline/videoExport'
@@ -132,20 +132,14 @@ export function useStudio() {
       engineRef.current = null
     }
   }, [showError])
-  const openSpeechHelp = useCallback(() => {
-    void request('speech_help').catch(showError)
-  }, [request, showError])
-  const showSpeechError = useCallback(
-    (reason: unknown) => {
-      if (!isSpeechUnavailable(reason)) return showError(reason)
-      setError(t('speech.notReady'), {
-        action: { label: t('speech.setupHelp'), run: openSpeechHelp },
+  const showGuessedWords = useCallback(
+    (words: string[]) =>
+      setNotice(t('speech.guessed', { words: words.join(', ') }), {
         duration: speechNoticeDuration,
-      })
-    },
-    [showError, setError, openSpeechHelp],
+      }),
+    [setNotice],
   )
-  const { generations, generating } = useScriptGeneration(engineRef, snapshot, showSpeechError)
+  const { generations, generating } = useScriptGeneration(engineRef, showError, showGuessedWords)
   const transport = useTransport({
     engineRef,
     busy,
@@ -440,7 +434,6 @@ export function useStudio() {
     operation,
     operationBlocked,
     showError,
-    showSpeechError,
     setNotice,
   })
   const getLevel = useCallback((id: string) => engineRef.current?.getLevel(id) ?? 0, [])
@@ -535,8 +528,6 @@ export function useStudio() {
     chooseWorkingDirectory,
     importNative,
     openNative: lifecycle.requestOpen,
-    openSpeechHelp,
-    showSpeechError,
     generating,
     ...scripts,
     ...transport,

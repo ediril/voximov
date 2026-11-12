@@ -8,7 +8,6 @@ import type {
   Snapshot,
 } from '../protocol'
 import type { MediaAsset } from '../types'
-import type { VoiceList } from './useVoiceList'
 import {
   pendingScriptClips,
   projectVoicePayload,
@@ -38,7 +37,6 @@ interface Options {
   operation: Operation
   operationBlocked: boolean
   showError: (reason: unknown) => void
-  showSpeechError: (reason: unknown) => void
   setNotice: (text: string) => void
 }
 
@@ -52,7 +50,6 @@ export function useScriptClips({
   operation,
   operationBlocked,
   showError,
-  showSpeechError,
   setNotice,
 }: Options) {
   const tracks = snapshot?.project.tracks ?? []
@@ -78,11 +75,7 @@ export function useScriptClips({
   }
   const generateScripts = (clips: ScriptClipRef[]) => {
     if (!clips.length || refuseWhileBlocked()) return
-    void operation(
-      t('action.generateSpeech'),
-      () => request('script_generate', { clips }),
-      showSpeechError,
-    )
+    void operation(t('action.generateSpeech'), () => request('script_generate', { clips }))
   }
   const addScriptClip = async (trackId: string, position: number, duration: number) => {
     const clipId = crypto.randomUUID()
@@ -97,14 +90,10 @@ export function useScriptClips({
     const requests = scriptSaveRequests(trackId, clip, text, generate)
     if (!requests.patch && !requests.generate) return true
     if (refuseWhileBlocked()) return false
-    void operation(
-      t(requests.generate ? 'action.generateSpeech' : 'action.editClip'),
-      async () => {
-        if (requests.patch) await request('script_patch', requests.patch)
-        if (requests.generate) await request('script_generate', requests.generate)
-      },
-      showSpeechError,
-    )
+    void operation(t(requests.generate ? 'action.generateSpeech' : 'action.editClip'), async () => {
+      if (requests.patch) await request('script_patch', requests.patch)
+      if (requests.generate) await request('script_generate', requests.generate)
+    })
     return true
   }
   const cancelGeneration = () => {
@@ -116,19 +105,12 @@ export function useScriptClips({
       request('project_voice', projectVoicePayload(voice)),
     )
   }
-  const loadVoices = useCallback(async (): Promise<VoiceList> => {
-    try {
-      return { status: 'ready', voices: (await request('speech_voices')).voices ?? [] }
-    } catch (reason) {
-      return { status: 'failed', error: messageOf(reason) }
-    }
-  }, [request])
-  const saveSpeechPreferences = async (url: string, voice: string) => {
+  const saveSpeechPreferences = async (voice: string) => {
     if (operationBlocked) return t('error.waitForOperation')
     const outcome = { error: null as string | null }
     const saved = await operation(
       t('action.saveVoiceover'),
-      () => request('speech_preferences_patch', { url, voice }),
+      () => request('speech_preferences_patch', { voice }),
       (reason) => {
         outcome.error = messageOf(reason)
       },
@@ -139,7 +121,6 @@ export function useScriptClips({
   return {
     projectVoice,
     defaultVoice,
-    speechUrl: snapshot?.config.speechUrl ?? '',
     scriptStatus,
     scriptClips,
     pendingScripts,
@@ -148,7 +129,6 @@ export function useScriptClips({
     saveScript,
     cancelGeneration,
     changeProjectVoice,
-    loadVoices,
     saveSpeechPreferences,
   }
 }

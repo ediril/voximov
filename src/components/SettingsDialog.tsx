@@ -16,11 +16,8 @@ type Props = Pick<
   | 'outputDevice'
   | 'changeAudioDevices'
   | 'recording'
-  | 'speechUrl'
   | 'defaultVoice'
-  | 'loadVoices'
   | 'saveSpeechPreferences'
-  | 'openSpeechHelp'
 >
 
 export default function SettingsDialog({

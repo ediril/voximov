@@ -1,2 +1,5 @@
 [build]
 target-dir = "build/.cache"
+
+[env]
+MACOSX_DEPLOYMENT_TARGET = "13.4"

@@ -6,63 +6,19 @@ export const minimumScriptSlot = 0.25
 export const defaultScriptSlot = 4
 export const overflowTolerance = 0.01
 export const speechNoticeDuration = 10000
-export const initialSpeedFactor = 2
-export const progressEstimateCap = 0.95
-export const progressTickMilliseconds = 200
-const speedFactorSmoothing = 0.3
 
 export type ScriptClip = Clip & { script: NonNullable<Clip['script']> }
 
 export interface ActiveGeneration {
-  state: 'queued' | 'generating'
+  state: 'queued' | 'downloading' | 'generating'
   progress: number
 }
 
 export type ActiveGenerations = Readonly<Record<string, ActiveGeneration>>
 
-interface GenerationTiming {
-  startedAt: number
-  expectedSeconds: number
-  previousAssetId: string | null
-}
-
-export type TrackedGeneration =
-  | { state: 'queued'; progress: number }
-  | ({ state: 'generating'; progress: number } & GenerationTiming)
-
-interface FinishedGeneration {
-  elapsedSeconds: number
-  previousAssetId: string | null
-}
-
-export interface SpeedFactor {
-  value: number
-  samples: number
-}
-
-export interface GenerationTracker {
-  active: Readonly<Record<string, TrackedGeneration>>
-  finished: Readonly<Record<string, FinishedGeneration>>
-  speedFactor: SpeedFactor
-}
-
-export type GenerationAction =
-  | { type: 'event'; event: GenerationEvent; at: number; clip: ScriptClip | undefined }
-  | {
-      type: 'snapshot'
-      tracks: readonly Track[]
-      assets: readonly Pick<MediaAsset, 'id' | 'duration'>[]
-    }
-
-export const idleGenerationTracker: GenerationTracker = {
-  active: {},
-  finished: {},
-  speedFactor: { value: initialSpeedFactor, samples: 0 },
-}
-
 export type ScriptClipStatus =
   | { state: 'draft' | 'queued' | 'fits' | 'stale' }
-  | { state: 'generating'; progress: number }
+  | { state: 'downloading' | 'generating'; progress: number }
   | { state: 'overflow'; overflowSeconds: number }
 
 export type ScriptClipState = ScriptClipStatus['state']
@@ -78,35 +34,6 @@ export function estimatedSpeechSeconds(text: string) {
   return words / speechWordsPerSecond
 }
 
-export const expectedGenerationSeconds = (text: string, speedFactor: number) =>
-  estimatedSpeechSeconds(text) * speedFactor
-
-export function estimatedProgress(
-  engineProgress: number,
-  elapsedSeconds: number,
-  expectedSeconds: number,
-) {
-  const estimate =
-    expectedSeconds > 0
-      ? Math.min(progressEstimateCap, Math.max(0, elapsedSeconds) / expectedSeconds)
-      : 0
-  return Math.max(engineProgress, estimate)
-}
-
-export function updatedSpeedFactor(
-  current: SpeedFactor,
-  elapsedSeconds: number,
-  speechSeconds: number,
-): SpeedFactor {
-  if (!(elapsedSeconds > 0) || !(speechSeconds > 0)) return current
-  const weight = Math.max(speedFactorSmoothing, 1 / (current.samples + 1))
-  const measured = elapsedSeconds / speechSeconds
-  return {
-    value: current.value + (measured - current.value) * weight,
-    samples: current.samples + 1,
-  }
-}
-
 export function fillRatio(text: string, boxSeconds: number): { ratio: number; level: FillLevel } {
   const ratio = boxSeconds > 0 ? estimatedSpeechSeconds(text) / boxSeconds : Infinity
   return { ratio, level: ratio < 0.85 ? 'ok' : ratio <= 1 ? 'tight' : 'over' }
@@ -118,8 +45,8 @@ export function scriptClipStatus(
   effectiveVoice: string,
   generation: ActiveGeneration | undefined,
 ): ScriptClipStatus {
-  if (generation?.state === 'generating')
-    return { state: 'generating', progress: generation.progress }
+  if (generation?.state === 'downloading' || generation?.state === 'generating')
+    return { state: generation.state, progress: generation.progress }
   if (generation?.state === 'queued') return { state: 'queued' }
   const take = clip.script.take
   if (!take || !asset) return { state: 'draft' }
@@ -177,7 +104,7 @@ export function scriptRowAction(
   text: string,
   locked: boolean,
 ): ScriptRowAction | null {
-  if (state === 'queued' || state === 'generating') return 'stop'
+  if (state === 'queued' || state === 'downloading' || state === 'generating') return 'stop'
   if (locked || !text.trim()) return null
   if (state === 'draft') return 'generate'
   if (state === 'stale') return 'regenerate'
@@ -193,122 +120,19 @@ export function findScriptClip(tracks: readonly Track[], clipId: string) {
 export const projectVoicePayload = (voice: string): CommandPayloads['project_voice'] =>
   voice ? { voice } : {}
 
-export function generationReducer(
-  tracker: GenerationTracker,
-  action: GenerationAction,
-): GenerationTracker {
-  return action.type === 'event'
-    ? withGenerationEvent(tracker, action.event, action.at, action.clip)
-    : withMeasuredTakes(tracker, action.tracks, action.assets)
-}
-
-function withGenerationEvent(
-  tracker: GenerationTracker,
+export function withGenerationEvent(
+  active: ActiveGenerations,
   event: GenerationEvent,
-  at: number,
-  clip: ScriptClip | undefined,
-): GenerationTracker {
-  const { active } = tracker
-  const current = active[event.clipId]
-  if (event.state === 'queued')
-    return {
-      ...tracker,
-      active: { ...active, [event.clipId]: { state: 'queued', progress: event.progress } },
-    }
-  if (event.state === 'generating') {
-    const timing: GenerationTiming =
-      current?.state === 'generating'
-        ? current
-        : {
-            startedAt: at,
-            expectedSeconds: expectedGenerationSeconds(
-              clip?.script.text ?? '',
-              tracker.speedFactor.value,
-            ),
-            previousAssetId: clip?.assetId ?? null,
-          }
-    return {
-      ...tracker,
-      active: {
-        ...active,
-        [event.clipId]: {
-          state: 'generating',
-          progress: event.progress,
-          startedAt: timing.startedAt,
-          expectedSeconds: timing.expectedSeconds,
-          previousAssetId: timing.previousAssetId,
-        },
-      },
-    }
-  }
-  if (!current) return tracker
+): ActiveGenerations {
+  if (event.state === 'queued' || event.state === 'downloading' || event.state === 'generating')
+    return { ...active, [event.clipId]: { state: event.state, progress: event.progress } }
+  if (!active[event.clipId]) return active
   const remaining = { ...active }
   delete remaining[event.clipId]
-  const finished =
-    event.state === 'done' && current.state === 'generating'
-      ? {
-          ...tracker.finished,
-          [event.clipId]: {
-            elapsedSeconds: (at - current.startedAt) / 1000,
-            previousAssetId: current.previousAssetId,
-          },
-        }
-      : tracker.finished
-  return { ...tracker, active: remaining, finished }
-}
-
-function withMeasuredTakes(
-  tracker: GenerationTracker,
-  tracks: readonly Track[],
-  assets: readonly Pick<MediaAsset, 'id' | 'duration'>[],
-): GenerationTracker {
-  const waiting = Object.entries(tracker.finished)
-  if (!waiting.length) return tracker
-  const durations = new Map(assets.map((asset) => [asset.id, asset.duration]))
-  const finished = { ...tracker.finished }
-  let speedFactor = tracker.speedFactor
-  for (const [clipId, generation] of waiting) {
-    const clip = findScriptClip(tracks, clipId)
-    if (!clip) {
-      delete finished[clipId]
-      continue
-    }
-    const speechSeconds = clip.assetId ? durations.get(clip.assetId) : undefined
-    if (clip.assetId === generation.previousAssetId || speechSeconds === undefined) continue
-    speedFactor = updatedSpeedFactor(speedFactor, generation.elapsedSeconds, speechSeconds)
-    delete finished[clipId]
-  }
-  if (Object.keys(finished).length === waiting.length) return tracker
-  return { ...tracker, finished, speedFactor }
-}
-
-export function displayedGenerations(
-  active: GenerationTracker['active'],
-  now: number,
-): ActiveGenerations {
-  return Object.fromEntries(
-    Object.entries(active).map(([clipId, generation]) => [
-      clipId,
-      generation.state === 'generating'
-        ? {
-            state: 'generating',
-            progress: estimatedProgress(
-              generation.progress,
-              (now - generation.startedAt) / 1000,
-              generation.expectedSeconds,
-            ),
-          }
-        : generation,
-    ]),
-  )
+  return remaining
 }
 
 export const isGenerating = (active: ActiveGenerations) => Object.keys(active).length > 0
-
-export function isSpeechUnavailable(reason: unknown) {
-  const message = reason instanceof Error ? reason.message : String(reason)
-  return message.includes('[[error.speechUnavailable')
-}
 
 export const singleLineText = (text: string) => text.replace(/[\r\n]+/g, ' ')
 

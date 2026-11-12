@@ -21,7 +21,6 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: async (_name: string, data: { request: { command: string } }) => {
     calls.push(data.request)
     if (data.request.command === 'play') await audio.playWait
-    if (data.request.command === 'speech_voices') return { voices: ['af_heart', 'bm_george'] }
     return data.request.command === 'audio_devices'
       ? { audioDevices: { inputs: [], outputs: [], nativeRouting: audio.native, available: true } }
       : {}
@@ -242,34 +241,21 @@ describe('Tauri studio transport', () => {
     await client.request('script_patch', { trackId, clipId, text: 'Hello there' })
     await client.request('project_voice', projectVoicePayload('bf_emma'))
     await client.request('project_voice', projectVoicePayload(''))
-    await client.request('speech_preferences_patch', {
-      url: 'http://localhost:8880',
-      voice: 'af_heart',
-    })
+    await client.request('speech_preferences_patch', { voice: 'af_heart' })
     await client.request('clip_edit', { trackId, clipId, mode: 'right', delta: 1.5 })
     await client.request('script_generate', { clips: [{ trackId, clipId }] })
     await client.request('script_cancel')
-    const voices = await client.request('speech_voices')
-    await client.request('speech_help')
     const language = expect.any(String)
     expect(calls.slice(before)).toEqual([
       { command: 'script_add', trackId, clipId, position: 2, duration: 4, language },
       { command: 'script_patch', trackId, clipId, text: 'Hello there', language },
       { command: 'project_voice', voice: 'bf_emma', language },
       { command: 'project_voice', language },
-      {
-        command: 'speech_preferences_patch',
-        url: 'http://localhost:8880',
-        voice: 'af_heart',
-        language,
-      },
+      { command: 'speech_preferences_patch', voice: 'af_heart', language },
       { command: 'clip_edit', trackId, clipId, mode: 'right', delta: 1.5, language },
       { command: 'script_generate', clips: [{ trackId, clipId }], language },
       { command: 'script_cancel', language },
-      { command: 'speech_voices', language },
-      { command: 'speech_help', language },
     ])
-    expect(voices.voices).toEqual(['af_heart', 'bm_george'])
     client.close()
   })
   it('delivers generation events to the subscriber', async () => {

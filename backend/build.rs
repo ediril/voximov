@@ -1,4 +1,5 @@
 fn main() {
+    link_clang_runtime();
     #[cfg(feature = "desktop")]
     {
         if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
@@ -10,6 +11,22 @@ fn main() {
         ))
         .expect("Failed to prepare Tauri application");
     }
+}
+
+fn link_clang_runtime() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos") {
+        return;
+    }
+    let output = std::process::Command::new("clang")
+        .arg("--print-resource-dir")
+        .output()
+        .expect("clang is required to link ONNX Runtime on macOS");
+    let resources = String::from_utf8(output.stdout).expect("clang resource folder");
+    println!(
+        "cargo:rustc-link-search=native={}/lib/darwin",
+        resources.trim()
+    );
+    println!("cargo:rustc-link-lib=static=clang_rt.osx");
 }
 
 #[cfg(feature = "desktop")]

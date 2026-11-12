@@ -23,6 +23,7 @@ mod import_reader;
 mod indexed_archive;
 #[cfg(test)]
 mod integration_tests;
+mod kokoro;
 mod lifecycle;
 mod loudness;
 #[cfg(test)]
@@ -39,6 +40,9 @@ mod performance_tests;
 #[cfg(test)]
 mod preferences_tests;
 mod progress;
+mod pronunciation;
+#[cfg(test)]
+mod pronunciation_tests;
 mod regions;
 #[cfg(test)]
 mod regions_tests;
@@ -62,6 +66,9 @@ mod video_export_ffmpeg_tests;
 #[cfg(test)]
 mod video_export_tests;
 mod video_source;
+mod voice_model;
+#[cfg(test)]
+mod voice_model_tests;
 
 fn main() -> anyhow::Result<()> {
     #[cfg(all(feature = "desktop", target_os = "linux"))]

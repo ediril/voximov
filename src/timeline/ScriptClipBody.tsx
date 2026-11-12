@@ -55,12 +55,16 @@ export default function ScriptClipBody({
           {text || t('script.placeholder')}
         </p>
         {status.state === 'queued' && <span className="tl-script-label">{t('script.queued')}</span>}
-        {status.state === 'generating' && (
+        {(status.state === 'downloading' || status.state === 'generating') && (
           <span className="tl-script-progress">
             <span className="tl-script-progress-bar">
               <i style={{ width: `${Math.round(status.progress * 100)}%` }} />
             </span>
-            <small>{t('script.progress', { percent: Math.round(status.progress * 100) })}</small>
+            <small>
+              {t(status.state === 'downloading' ? 'script.downloading' : 'script.progress', {
+                percent: Math.round(status.progress * 100),
+              })}
+            </small>
           </span>
         )}
         {status.state === 'draft' && text && (
@@ -70,7 +74,7 @@ export default function ScriptClipBody({
           />
         )}
       </div>
-      {status.state === 'generating' && (
+      {(status.state === 'downloading' || status.state === 'generating') && (
         <button
           className="tl-script-action"
           title={t('script.stop')}

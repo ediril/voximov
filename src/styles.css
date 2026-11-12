@@ -1611,9 +1611,6 @@ kbd {
 .settings-section .button {
   margin-top: 12px;
 }
-.settings-section .speech-unavailable {
-  margin-bottom: 10px;
-}
 .settings-error {
   border: 1px solid #82535a;
   border-radius: 5px;
@@ -1639,24 +1636,6 @@ kbd {
 }
 .script-actions .button {
   flex: 1;
-}
-.speech-unavailable {
-  display: flex;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #82535a;
-  border-radius: 6px;
-  background: #3e2a2d80;
-  color: #f2c1c0;
-  font-size: 11px;
-  line-height: 1.5;
-}
-.speech-unavailable > svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.speech-unavailable .text-button {
-  padding: 6px 0 0;
 }
 .script-list {
   display: flex;

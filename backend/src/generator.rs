@@ -1,8 +1,9 @@
 use crate::{
     commands,
     model::{Clip, Project, Take, id},
-    speech,
+    speech::{Speaker, Stage},
     storage::Store,
+    voice_model,
 };
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -26,6 +27,7 @@ pub struct Job {
 #[serde(rename_all = "camelCase")]
 pub enum GenerationState {
     Queued,
+    Downloading,
     Generating,
     Done,
     Failed,
@@ -40,6 +42,8 @@ pub struct GenerationEvent {
     pub progress: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub guessed: Vec<String>,
 }
 
 type Sink = Arc<dyn Fn(GenerationEvent) + Send + Sync>;
@@ -53,13 +57,18 @@ struct Shared {
 
 impl Shared {
     fn emit(&self, clip_id: &str, state: GenerationState, progress: f64, error: Option<String>) {
-        let sink = self.sink.lock().unwrap().clone();
-        sink(GenerationEvent {
+        self.publish(GenerationEvent {
             clip_id: clip_id.into(),
             state,
             progress,
             error,
+            guessed: vec![],
         });
+    }
+
+    fn publish(&self, event: GenerationEvent) {
+        let sink = self.sink.lock().unwrap().clone();
+        sink(event);
     }
 }
 
@@ -69,7 +78,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn start(store: Arc<Mutex<Store>>) -> Self {
+    pub fn start(store: Arc<Mutex<Store>>, mut speaker: Box<dyn Speaker>) -> Self {
         let shared = Arc::new(Shared {
             queue: Mutex::new(VecDeque::new()),
             ready: Condvar::new(),
@@ -91,7 +100,7 @@ impl Generator {
                             queue = worker.ready.wait(queue).unwrap();
                         }
                     };
-                    process(&store, &worker, &job);
+                    process(&store, &worker, speaker.as_mut(), &job);
                 }
             })
             .expect("speech worker thread");
@@ -129,11 +138,16 @@ impl Generator {
     }
 }
 
-fn process(store: &Mutex<Store>, shared: &Shared, job: &Job) {
-    shared.emit(&job.clip_id, GenerationState::Generating, 0., None);
-    match generate(store, shared, job) {
-        Ok(true) => shared.emit(&job.clip_id, GenerationState::Done, 1., None),
-        Ok(false) => shared.emit(&job.clip_id, GenerationState::Cancelled, 0., None),
+fn process(store: &Mutex<Store>, shared: &Shared, speaker: &mut dyn Speaker, job: &Job) {
+    match generate(store, shared, speaker, job) {
+        Ok(Some(guessed)) => shared.publish(GenerationEvent {
+            clip_id: job.clip_id.clone(),
+            state: GenerationState::Done,
+            progress: 1.,
+            error: None,
+            guessed,
+        }),
+        Ok(None) => shared.emit(&job.clip_id, GenerationState::Cancelled, 0., None),
         Err(error) => shared.emit(
             &job.clip_id,
             GenerationState::Failed,
@@ -153,8 +167,13 @@ fn find<'a>(project: &'a mut Project, job: &Job) -> Result<&'a mut Clip> {
         .context(crate::i18n::message("error.clipMissing"))
 }
 
-fn generate(store: &Mutex<Store>, shared: &Shared, job: &Job) -> Result<bool> {
-    let (url, text, voice) = {
+fn generate(
+    store: &Mutex<Store>,
+    shared: &Shared,
+    speaker: &mut dyn Speaker,
+    job: &Job,
+) -> Result<Option<Vec<String>>> {
+    let (text, voice) = {
         let mut store = store
             .lock()
             .map_err(|_| anyhow::anyhow!(crate::i18n::message("error.storeUnavailable")))?;
@@ -163,35 +182,44 @@ fn generate(store: &Mutex<Store>, shared: &Shared, job: &Job) -> Result<bool> {
             .voice
             .clone()
             .unwrap_or_else(|| store.config.speech_voice.clone());
-        let url = store.config.speech_url.clone();
         let text = find(&mut store.project, job)?
             .script
             .as_ref()
             .map(|script| script.text.clone())
             .unwrap_or_default();
-        (url, text, voice)
+        (text, voice)
     };
     ensure!(!text.is_empty(), crate::i18n::message("error.scriptEmpty"));
-    let estimate = speech::estimated_seconds(&text);
-    let mut pcm = Vec::new();
-    let completed = speech::stream(&url, &text, &voice, |bytes| {
-        pcm.extend_from_slice(bytes);
-        let progress = (speech::seconds(pcm.len()) / estimate).min(0.95);
-        shared.emit(&job.clip_id, GenerationState::Generating, progress, None);
+    ensure!(
+        voice_model::is_voice(&voice),
+        crate::i18n::message("error.scriptVoice")
+    );
+    let mut report = |stage: Stage, progress: f64| {
+        let state = match stage {
+            Stage::Downloading => GenerationState::Downloading,
+            Stage::Generating => GenerationState::Generating,
+        };
+        shared.emit(&job.clip_id, state, progress.clamp(0., 1.), None);
         !shared.cancel.load(Ordering::SeqCst)
-    })?;
-    if !completed || shared.cancel.load(Ordering::SeqCst) {
-        return Ok(false);
+    };
+    let Some(speech) = speaker.speak(&text, &voice, &mut report)? else {
+        return Ok(None);
+    };
+    if shared.cancel.load(Ordering::SeqCst) {
+        return Ok(None);
     }
     ensure!(
-        pcm.len() >= 2,
+        !speech.samples.is_empty(),
         crate::i18n::formatted_message("error.speechFailed", &[("detail", "empty".into())])
     );
     let file = std::env::temp_dir().join(format!("voximov-take-{}.wav", id()));
-    fs::write(&file, speech::wav(&pcm))?;
+    fs::write(
+        &file,
+        crate::speech::wav(&speech.samples, speech.sample_rate),
+    )?;
     let attached = attach(store, job, &file, &text, &voice);
     let _ = fs::remove_file(&file);
-    attached.map(|_| true)
+    attached.map(|_| Some(speech.guessed))
 }
 
 fn asset_name(text: &str) -> String {

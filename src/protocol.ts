@@ -21,7 +21,6 @@ export interface Snapshot {
   }
   config: {
     workingDirectory: string
-    speechUrl: string
     speechVoice: string
     projectFile: string | null
     dirty: boolean
@@ -41,12 +40,14 @@ export interface ScriptClipRef {
   trackId: string
   clipId: string
 }
-export type GenerationState = 'queued' | 'generating' | 'done' | 'failed' | 'cancelled'
+export type GenerationState =
+  'queued' | 'downloading' | 'generating' | 'done' | 'failed' | 'cancelled'
 export interface GenerationEvent {
   clipId: string
   state: GenerationState
   progress: number
   error?: string
+  guessed?: string[]
 }
 export interface CommandPayloads {
   snapshot: Record<string, never>
@@ -89,11 +90,9 @@ export interface CommandPayloads {
   script_add: { trackId: string; clipId: string; position: number; duration: number }
   script_patch: { trackId: string; clipId: string; text: string }
   project_voice: { voice?: string }
-  speech_preferences_patch: { url: string; voice: string }
+  speech_preferences_patch: { voice: string }
   script_generate: { clips: ScriptClipRef[] }
   script_cancel: Record<string, never>
-  speech_voices: Record<string, never>
-  speech_help: Record<string, never>
 }
 export type CommandName = keyof CommandPayloads
 export interface CommandResult {
@@ -104,7 +103,6 @@ export interface CommandResult {
   snapshot?: Snapshot
   regions?: ClipRegion[]
   audioDevices?: AudioDeviceCatalog
-  voices?: string[]
 }
 
 export function decodeAudioPacket(data: ArrayBuffer) {

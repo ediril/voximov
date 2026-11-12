@@ -1,151 +1,110 @@
-use anyhow::{Result, bail};
-use serde_json::{Value, json};
-use std::{io::Read, time::Duration};
+use crate::{
+    kokoro::{self, Kokoro},
+    pronunciation::{self, Pronouncer},
+    voice_model,
+};
+use anyhow::{Result, ensure};
+use std::path::PathBuf;
 
-pub const SAMPLE_RATE: u32 = 24_000;
-const BYTES_PER_SECOND: f64 = SAMPLE_RATE as f64 * 2.;
-const WORDS_PER_SECOND: f64 = 2.5;
-const MAX_STREAM_BYTES: u64 = 2_000_000_000;
-
-pub fn estimated_seconds(text: &str) -> f64 {
-    (text.split_whitespace().count() as f64 / WORDS_PER_SECOND).max(0.5)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Stage {
+    Downloading,
+    Generating,
 }
 
-pub fn seconds(bytes: usize) -> f64 {
-    bytes as f64 / BYTES_PER_SECOND
+pub struct Speech {
+    pub samples: Vec<f32>,
+    pub sample_rate: u32,
+    pub guessed: Vec<String>,
 }
 
-fn agent(timeout: Option<Duration>) -> ureq::Agent {
-    ureq::Agent::new_with_config(
-        ureq::Agent::config_builder()
-            .timeout_connect(Some(Duration::from_secs(3)))
-            .timeout_global(timeout)
-            .http_status_as_error(false)
-            .build(),
-    )
+pub trait Speaker: Send {
+    fn speak(
+        &mut self,
+        text: &str,
+        voice: &str,
+        report: &mut dyn FnMut(Stage, f64) -> bool,
+    ) -> Result<Option<Speech>>;
 }
 
-fn unavailable(url: &str) -> anyhow::Error {
-    anyhow::anyhow!(crate::i18n::formatted_message(
-        "error.speechUnavailable",
-        &[("url", url.into())]
-    ))
+pub struct LocalSpeaker {
+    directory: PathBuf,
+    source: String,
+    pronouncer: Option<Pronouncer>,
+    kokoro: Option<Kokoro>,
 }
 
-fn check_status(status: u16, body: &str) -> Result<()> {
-    if (200..300).contains(&status) {
-        return Ok(());
-    }
-    let detail = serde_json::from_str::<Value>(body)
-        .ok()
-        .and_then(|value| {
-            value["detail"]["message"]
-                .as_str()
-                .or(value["detail"].as_str())
-                .or(value["error"].as_str())
-                .map(str::to_owned)
-        })
-        .unwrap_or_else(|| status.to_string());
-    bail!(crate::i18n::formatted_message(
-        "error.speechFailed",
-        &[("detail", detail)]
-    ))
-}
-
-pub fn parse_voices(body: &str) -> Result<Vec<String>> {
-    let value: Value = serde_json::from_str(body)?;
-    let voices: Vec<String> = value["voices"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|voice| {
-            voice
-                .as_str()
-                .or(voice["id"].as_str())
-                .or(voice["name"].as_str())
-                .map(str::to_owned)
-        })
-        .collect();
-    if voices.is_empty() {
-        bail!(crate::i18n::formatted_message(
-            "error.speechFailed",
-            &[("detail", "voices".into())]
-        ));
-    }
-    Ok(voices)
-}
-
-pub fn voices(url: &str) -> Result<Vec<String>> {
-    let mut response = agent(Some(Duration::from_secs(5)))
-        .get(format!("{url}/v1/audio/voices"))
-        .call()
-        .map_err(|_| unavailable(url))?;
-    let body = response
-        .body_mut()
-        .read_to_string()
-        .map_err(|_| unavailable(url))?;
-    check_status(response.status().as_u16(), &body)?;
-    parse_voices(&body)
-}
-
-pub fn stream(
-    url: &str,
-    text: &str,
-    voice: &str,
-    mut chunk: impl FnMut(&[u8]) -> bool,
-) -> Result<bool> {
-    let request = json!({
-        "model": "kokoro",
-        "input": text,
-        "voice": voice,
-        "response_format": "pcm",
-        "stream": true,
-        "speed": 1.0
-    });
-    let response = agent(None)
-        .post(format!("{url}/v1/audio/speech"))
-        .header("Content-Type", "application/json")
-        .send(serde_json::to_vec(&request)?.as_slice())
-        .map_err(|_| unavailable(url))?;
-    let status = response.status().as_u16();
-    let mut reader = response
-        .into_body()
-        .into_with_config()
-        .limit(MAX_STREAM_BYTES)
-        .reader();
-    if !(200..300).contains(&status) {
-        let mut body = String::new();
-        let _ = reader.read_to_string(&mut body);
-        check_status(status, &body)?;
-    }
-    let mut buffer = vec![0u8; 16 * 1024];
-    loop {
-        let read = reader.read(&mut buffer).map_err(|_| unavailable(url))?;
-        if read == 0 {
-            return Ok(true);
-        }
-        if !chunk(&buffer[..read]) {
-            return Ok(false);
+impl LocalSpeaker {
+    pub fn new(directory: PathBuf, source: impl Into<String>) -> Self {
+        Self {
+            directory,
+            source: source.into(),
+            pronouncer: None,
+            kokoro: None,
         }
     }
 }
 
-pub fn wav(pcm: &[u8]) -> Vec<u8> {
-    let pcm = &pcm[..pcm.len() & !1];
-    let data = pcm.len() as u32;
-    let mut file = Vec::with_capacity(44 + pcm.len());
+impl Speaker for LocalSpeaker {
+    fn speak(
+        &mut self,
+        text: &str,
+        voice: &str,
+        report: &mut dyn FnMut(Stage, f64) -> bool,
+    ) -> Result<Option<Speech>> {
+        let files = voice_model::manifest();
+        if !voice_model::is_installed(&self.directory, &files)
+            && !voice_model::install(&self.directory, &self.source, &files, |progress| {
+                report(Stage::Downloading, progress)
+            })?
+        {
+            return Ok(None);
+        }
+        if !report(Stage::Generating, 0.) {
+            return Ok(None);
+        }
+        let pronounced = self
+            .pronouncer
+            .get_or_insert_with(Pronouncer::new)
+            .pronounce(text, voice_model::is_british(voice))?;
+        let sentences = pronunciation::sentence_chunks(&pronounced.phonemes, kokoro::MAX_PHONEMES);
+        ensure!(
+            !sentences.is_empty(),
+            crate::i18n::message("error.scriptEmpty")
+        );
+        let kokoro = match &mut self.kokoro {
+            Some(kokoro) => kokoro,
+            empty => empty.insert(Kokoro::load(&self.directory)?),
+        };
+        Ok(kokoro
+            .speak(&sentences, voice, |progress| {
+                report(Stage::Generating, progress)
+            })?
+            .map(|samples| Speech {
+                samples,
+                sample_rate: kokoro::SAMPLE_RATE,
+                guessed: pronounced.guessed,
+            }))
+    }
+}
+
+pub fn wav(samples: &[f32], sample_rate: u32) -> Vec<u8> {
+    let data = (samples.len() * 2) as u32;
+    let mut file = Vec::with_capacity(44 + samples.len() * 2);
     file.extend(b"RIFF");
     file.extend((36 + data).to_le_bytes());
     file.extend(b"WAVEfmt ");
     file.extend(16u32.to_le_bytes());
     file.extend(1u16.to_le_bytes());
     file.extend(1u16.to_le_bytes());
-    file.extend(SAMPLE_RATE.to_le_bytes());
-    file.extend((SAMPLE_RATE * 2).to_le_bytes());
+    file.extend(sample_rate.to_le_bytes());
+    file.extend((sample_rate * 2).to_le_bytes());
     file.extend(2u16.to_le_bytes());
     file.extend(16u16.to_le_bytes());
     file.extend(b"data");
     file.extend(data.to_le_bytes());
-    file.extend(pcm);
+    for sample in samples {
+        file.extend(((sample.clamp(-1., 1.) * i16::MAX as f32) as i16).to_le_bytes());
+    }
     file
 }

@@ -7,8 +7,8 @@ support that Emrah Diril contributed to that project under the MIT License.
 Everything added or changed after commit 3d2ede4 is by Emrah Diril and is
 licensed under the PolyForm Strict License 1.0.0 in LICENSE, including:
 
-- AI voiceover: script clips, local Kokoro generation, and the voice picker
-- the Kokoro management scripts in scripts/
+- AI voiceover: script clips, local Kokoro generation, pronunciation, and
+  the voice picker
 - the removal of Linux support and the rewritten documentation
 - MP4 video export and the FFmpeg build script in scripts/
 
@@ -48,3 +48,15 @@ from the unmodified FFmpeg 8.1.3 release with LGPL components only, without
 --enable-gpl, --enable-nonfree or --enable-version3. The FFmpeg 8.1.3 source
 code is available from ffmpeg.org at
 https://ffmpeg.org/releases/ffmpeg-8.1.3.tar.xz.
+
+AI voiceover
+
+The app runs ONNX Runtime (https://onnxruntime.ai), Copyright (c) Microsoft
+Corporation, under the MIT License, through the ort crate (MIT or Apache 2.0).
+It phonemizes English with misaki-rs (https://github.com/MicheleYin/misaki-rs),
+Copyright (c) 2026 Michele Yin, under the MIT License, which includes the
+dictionaries of misaki (https://github.com/hexgrad/misaki) under the Apache
+License 2.0. On first use the app downloads the Kokoro-82M voice model and
+voices (https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX), licensed
+under the Apache License 2.0; they are not part of the app. espeak-ng is not
+used.

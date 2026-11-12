@@ -1,5 +1,6 @@
 use crate::{
-    cancellation::Cancellation, generator::Generator, session::AudioSession, storage::Store,
+    cancellation::Cancellation, generator::Generator, session::AudioSession, speech::LocalSpeaker,
+    storage::Store, voice_model,
 };
 use std::sync::{Arc, Mutex, atomic::AtomicBool};
 use tokio::sync::Notify;
@@ -17,9 +18,13 @@ pub struct StudioState {
 impl StudioState {
     pub fn new(store: Store) -> Self {
         let cancellation = store.cancellation.clone();
+        let speaker = LocalSpeaker::new(
+            voice_model::directory(&store.config_directory),
+            voice_model::SOURCE,
+        );
         let store = Arc::new(Mutex::new(store));
         Self {
-            generator: Generator::start(store.clone()),
+            generator: Generator::start(store.clone(), Box::new(speaker)),
             store,
             audio: Arc::new(Mutex::new(AudioSession::new())),
             shutdown: Arc::new(Notify::new()),

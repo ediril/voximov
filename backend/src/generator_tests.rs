@@ -2,14 +2,13 @@ use crate::{
     commands,
     generator::{GenerationEvent, GenerationState, Generator, Job},
     model::id,
-    speech,
+    speech::{LocalSpeaker, Speaker, Speech, Stage},
     storage::Store,
+    voice_model,
 };
 use anyhow::Result;
 use serde_json::json;
 use std::{
-    io::{BufRead, BufReader, Read, Write},
-    net::TcpListener,
     sync::{
         Arc, Mutex,
         mpsc::{Receiver, channel},
@@ -18,67 +17,42 @@ use std::{
     time::Duration,
 };
 
-struct FakeKokoro {
-    url: String,
-    requests: Arc<Mutex<Vec<serde_json::Value>>>,
+#[derive(Default)]
+struct FakeSpeaker {
+    requests: Arc<Mutex<Vec<(String, String)>>>,
+    sentence_delay: Duration,
+    sentences: usize,
 }
 
-fn fake_kokoro(chunks: usize, chunk_delay: Duration) -> FakeKokoro {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let url = format!("http://{}", listener.local_addr().unwrap());
-    let requests = Arc::new(Mutex::new(vec![]));
-    let recorded = requests.clone();
-    thread::spawn(move || {
-        for stream in listener.incoming().flatten() {
-            let recorded = recorded.clone();
-            thread::spawn(move || {
-                let mut reader = BufReader::new(stream.try_clone().unwrap());
-                let mut request_line = String::new();
-                reader.read_line(&mut request_line).unwrap();
-                let mut length = 0;
-                loop {
-                    let mut header = String::new();
-                    reader.read_line(&mut header).unwrap();
-                    if header == "\r\n" {
-                        break;
-                    }
-                    if let Some(value) = header.to_lowercase().strip_prefix("content-length:") {
-                        length = value.trim().parse().unwrap();
-                    }
-                }
-                let mut body = vec![0; length];
-                reader.read_exact(&mut body).unwrap();
-                let mut stream = stream;
-                if request_line.starts_with("GET /v1/audio/voices") {
-                    let body = json!({"voices":["af_heart","am_michael"]}).to_string();
-                    let _ = write!(
-                        stream,
-                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
-                    );
-                    return;
-                }
-                recorded
-                    .lock()
-                    .unwrap()
-                    .push(serde_json::from_slice(&body).unwrap());
-                let _ = write!(
-                    stream,
-                    "HTTP/1.1 200 OK\r\nContent-Type: audio/pcm\r\nConnection: close\r\n\r\n"
-                );
-                let chunk: Vec<u8> = (0..speech::SAMPLE_RATE / 4)
-                    .flat_map(|_| 8000i16.to_le_bytes())
-                    .collect();
-                for _ in 0..chunks {
-                    if stream.write_all(&chunk).is_err() {
-                        return;
-                    }
-                    thread::sleep(chunk_delay);
-                }
-            });
+impl Speaker for FakeSpeaker {
+    fn speak(
+        &mut self,
+        text: &str,
+        voice: &str,
+        report: &mut dyn FnMut(Stage, f64) -> bool,
+    ) -> Result<Option<Speech>> {
+        self.requests
+            .lock()
+            .unwrap()
+            .push((text.to_owned(), voice.to_owned()));
+        if !report(Stage::Downloading, 0.5) {
+            return Ok(None);
         }
-    });
-    FakeKokoro { url, requests }
+        for sentence in 0..self.sentences {
+            thread::sleep(self.sentence_delay);
+            if !report(
+                Stage::Generating,
+                (sentence + 1) as f64 / self.sentences as f64,
+            ) {
+                return Ok(None);
+            }
+        }
+        Ok(Some(Speech {
+            samples: vec![0.25; 24_000],
+            sample_rate: 24_000,
+            guessed: vec!["Zorblax".into()],
+        }))
+    }
 }
 
 type Studio = (
@@ -88,15 +62,14 @@ type Studio = (
     Receiver<GenerationEvent>,
 );
 
-fn studio(url: &str) -> Result<Studio> {
+fn studio(speaker: impl Speaker + 'static) -> Result<Studio> {
     let temporary = tempfile::tempdir()?;
-    let mut store = Store::open(
+    let store = Store::open(
         temporary.path().join("config"),
         Some(temporary.path().join("work")),
     )?;
-    store.set_speech(url, "af_heart")?;
     let store = Arc::new(Mutex::new(store));
-    let generator = Generator::start(store.clone());
+    let generator = Generator::start(store.clone(), Box::new(speaker));
     let (sender, events) = channel();
     let sender = Mutex::new(sender);
     generator.set_sink(move |event| {
@@ -124,7 +97,7 @@ fn wait_for(events: &Receiver<GenerationEvent>, state: GenerationState) -> Vec<G
     let mut seen = vec![];
     loop {
         let event = events
-            .recv_timeout(Duration::from_secs(10))
+            .recv_timeout(Duration::from_secs(60))
             .expect("generation event");
         let done = event.state == state;
         seen.push(event);
@@ -135,24 +108,33 @@ fn wait_for(events: &Receiver<GenerationEvent>, state: GenerationState) -> Vec<G
 }
 
 #[test]
-fn generated_speech_becomes_the_clip_take() -> Result<()> {
-    let kokoro = fake_kokoro(4, Duration::from_millis(5));
-    let (_temporary, store, generator, events) = studio(&kokoro.url)?;
-    let job = script(&store, "Welcome to the harbour at dawn.")?;
+fn generated_speech_becomes_the_clip_take_with_its_guessed_words() -> Result<()> {
+    let speaker = FakeSpeaker {
+        sentences: 3,
+        ..Default::default()
+    };
+    let requests = speaker.requests.clone();
+    let (_temporary, store, generator, events) = studio(speaker)?;
+    let job = script(&store, "Welcome to Zorblax at dawn.")?;
     generator.enqueue([job.clone()]);
     let seen = wait_for(&events, GenerationState::Done);
-    assert_eq!(seen[0].state, GenerationState::Queued);
-    let progress: Vec<f64> = seen
-        .iter()
-        .filter(|event| event.state == GenerationState::Generating)
-        .map(|event| event.progress)
-        .collect();
-    assert!(progress.windows(2).all(|pair| pair[0] <= pair[1]));
-    assert!(progress.iter().any(|value| *value > 0.));
-    let request = kokoro.requests.lock().unwrap()[0].clone();
-    assert_eq!(request["input"], "Welcome to the harbour at dawn.");
-    assert_eq!(request["voice"], "af_heart");
-    assert_eq!(request["response_format"], "pcm");
+    let states: Vec<GenerationState> = seen.iter().map(|event| event.state).collect();
+    assert_eq!(
+        states,
+        [
+            GenerationState::Queued,
+            GenerationState::Downloading,
+            GenerationState::Generating,
+            GenerationState::Generating,
+            GenerationState::Generating,
+            GenerationState::Done,
+        ]
+    );
+    assert_eq!(seen.last().unwrap().guessed, ["Zorblax"]);
+    assert_eq!(
+        requests.lock().unwrap()[0],
+        ("Welcome to Zorblax at dawn.".into(), "af_heart".into())
+    );
     let store = store.lock().unwrap();
     let clip = &store.project.tracks[1].clips[0];
     let script = clip.script.as_ref().unwrap();
@@ -174,8 +156,9 @@ fn generated_speech_becomes_the_clip_take() -> Result<()> {
 
 #[test]
 fn regenerating_replaces_the_previous_take_and_uses_the_project_voice() -> Result<()> {
-    let kokoro = fake_kokoro(2, Duration::ZERO);
-    let (_temporary, store, generator, events) = studio(&kokoro.url)?;
+    let speaker = FakeSpeaker::default();
+    let requests = speaker.requests.clone();
+    let (_temporary, store, generator, events) = studio(speaker)?;
     let job = script(&store, "First version.")?;
     generator.enqueue([job.clone()]);
     wait_for(&events, GenerationState::Done);
@@ -189,7 +172,7 @@ fn regenerating_replaces_the_previous_take_and_uses_the_project_voice() -> Resul
     )?;
     generator.enqueue([job]);
     wait_for(&events, GenerationState::Done);
-    assert_eq!(kokoro.requests.lock().unwrap()[1]["voice"], "am_michael");
+    assert_eq!(requests.lock().unwrap()[1].1, "am_michael");
     let store = store.lock().unwrap();
     let clip = &store.project.tracks[1].clips[0];
     assert_ne!(clip.asset_id.as_deref(), Some(first.as_str()));
@@ -199,9 +182,14 @@ fn regenerating_replaces_the_previous_take_and_uses_the_project_voice() -> Resul
 }
 
 #[test]
-fn cancelling_stops_the_stream_and_clears_the_queue() -> Result<()> {
-    let kokoro = fake_kokoro(40, Duration::from_millis(50));
-    let (_temporary, store, generator, events) = studio(&kokoro.url)?;
+fn cancelling_stops_generation_and_clears_the_queue() -> Result<()> {
+    let speaker = FakeSpeaker {
+        sentences: 40,
+        sentence_delay: Duration::from_millis(50),
+        ..Default::default()
+    };
+    let requests = speaker.requests.clone();
+    let (_temporary, store, generator, events) = studio(speaker)?;
     let current = script(&store, "A long sentence that takes a while to speak aloud.")?;
     let waiting = script(&store, "This one never starts.")?;
     generator.enqueue([current.clone(), waiting.clone()]);
@@ -232,61 +220,38 @@ fn cancelling_stops_the_stream_and_clears_the_queue() -> Result<()> {
             .all(|clip| clip.asset_id.is_none())
     );
     assert!(store.project.assets.is_empty());
-    assert_eq!(kokoro.requests.lock().unwrap().len(), 1);
+    assert_eq!(requests.lock().unwrap().len(), 1);
     Ok(())
 }
 
 #[test]
-fn unreachable_kokoro_and_empty_clips_fail_with_a_reason() -> Result<()> {
-    let closed = TcpListener::bind("127.0.0.1:0")?;
-    let url = format!("http://{}", closed.local_addr()?);
-    drop(closed);
-    let (_temporary, store, generator, events) = studio(&url)?;
-    assert!(
-        speech::voices(&url)
-            .unwrap_err()
-            .to_string()
-            .contains("error.speechUnavailable")
-    );
-    let unreachable = script(&store, "Hello there.")?;
+fn empty_clips_and_unknown_voices_fail_with_a_reason() -> Result<()> {
+    let (_temporary, store, generator, events) = studio(FakeSpeaker::default())?;
     let empty = script(&store, "   ")?;
-    generator.enqueue([unreachable, empty]);
-    let failures: Vec<String> = (0..2)
-        .map(|_| {
-            wait_for(&events, GenerationState::Failed)
-                .pop()
-                .unwrap()
-                .error
-                .unwrap()
-        })
-        .collect();
-    assert!(failures[0].contains("error.speechUnavailable"));
-    assert!(failures[1].contains("error.scriptEmpty"));
+    generator.enqueue([empty]);
+    let failure = wait_for(&events, GenerationState::Failed).pop().unwrap();
+    assert!(failure.error.unwrap().contains("error.scriptEmpty"));
+    commands::execute(
+        &mut store.lock().unwrap(),
+        &json!({"command":"project_voice","voice":"af_bella+af_sky"}),
+    )?;
+    generator.enqueue([script(&store, "Hello there.")?]);
+    let failure = wait_for(&events, GenerationState::Failed).pop().unwrap();
+    assert!(failure.error.unwrap().contains("error.scriptVoice"));
     Ok(())
 }
 
 #[test]
-fn voice_lists_accept_names_or_objects() -> Result<()> {
-    assert_eq!(
-        speech::parse_voices(r#"{"voices":["af_heart","bf_emma"]}"#)?,
-        ["af_heart", "bf_emma"]
-    );
-    assert_eq!(
-        speech::parse_voices(r#"{"voices":[{"id":"af_heart"},{"name":"bf_emma"}]}"#)?,
-        ["af_heart", "bf_emma"]
-    );
-    assert!(speech::parse_voices(r#"{"voices":[]}"#).is_err());
-    Ok(())
-}
-
-#[test]
-#[ignore = "needs a running Kokoro-FastAPI server at http://localhost:8880"]
-fn live_kokoro_generates_a_take() -> Result<()> {
-    let (_temporary, store, generator, events) = studio("http://localhost:8880")?;
-    assert!(speech::voices("http://localhost:8880")?.contains(&"af_heart".to_owned()));
+#[ignore = "downloads the 100 MB voice model; set VOXIMOV_VOICE_MODEL to reuse a folder"]
+fn local_kokoro_generates_a_take() -> Result<()> {
+    let directory = std::env::var_os("VOXIMOV_VOICE_MODEL")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("voximov-voice-model"));
+    let speaker = LocalSpeaker::new(directory.clone(), voice_model::SOURCE);
+    let (_temporary, store, generator, events) = studio(speaker)?;
     let job = script(
         &store,
-        "Welcome to the harbour at dawn, where the cats are already awake.",
+        "Welcome to Voximov. Record a voiceover, then deploy it to Zorblax.",
     )?;
     generator.enqueue([job]);
     let seen = wait_for(&events, GenerationState::Done);
@@ -294,13 +259,18 @@ fn live_kokoro_generates_a_take() -> Result<()> {
         .iter()
         .filter(|event| event.state == GenerationState::Generating && event.progress > 0.)
         .count();
+    assert!(voice_model::is_installed(
+        &directory,
+        &voice_model::manifest()
+    ));
+    assert_eq!(seen.last().unwrap().guessed, ["Zorblax", "voiceover"]);
     let store = store.lock().unwrap();
     let asset = &store.project.assets[0];
     println!(
-        "duration {:.2}s, {} progress events",
-        asset.duration, generating
+        "duration {:.2}s, {generating} progress events",
+        asset.duration
     );
-    assert!((2.5..6.).contains(&asset.duration));
-    assert!(generating > 1, "progress arrives while streaming");
+    assert!((3.0..8.).contains(&asset.duration));
+    assert!(generating >= 2, "progress arrives per sentence");
     Ok(())
 }

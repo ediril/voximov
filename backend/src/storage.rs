@@ -28,8 +28,6 @@ pub struct Config {
     pub input_device: String,
     #[serde(default)]
     pub output_device: String,
-    #[serde(default = "default_speech_url")]
-    pub speech_url: String,
     #[serde(default = "default_speech_voice")]
     pub speech_voice: String,
     #[serde(default, deserialize_with = "stored_time_display")]
@@ -95,9 +93,6 @@ pub struct EffectPreset {
 fn default_language() -> String {
     "system".into()
 }
-fn default_speech_url() -> String {
-    "http://localhost:8880".into()
-}
 fn default_speech_voice() -> String {
     "af_heart".into()
 }
@@ -131,7 +126,6 @@ impl Store {
                 effect_presets: vec![],
                 input_device: String::new(),
                 output_device: String::new(),
-                speech_url: default_speech_url(),
                 speech_voice: default_speech_voice(),
                 time_display: TimeDisplay::default(),
             }
@@ -227,22 +221,12 @@ impl Store {
         self.config = config;
         Ok(())
     }
-    pub fn set_speech(&mut self, url: &str, voice: &str) -> Result<()> {
-        let url = url.trim().trim_end_matches('/');
+    pub fn set_speech_voice(&mut self, voice: &str) -> Result<()> {
         ensure!(
-            (url.starts_with("http://") || url.starts_with("https://"))
-                && url.len() <= 2048
-                && !url.chars().any(|c| c.is_control() || c.is_whitespace()),
-            crate::i18n::message("error.speechUrl")
-        );
-        ensure!(
-            !voice.is_empty()
-                && voice.len() <= crate::model::MAX_VOICE_NAME
-                && !voice.chars().any(char::is_control),
+            crate::voice_model::is_voice(voice),
             crate::i18n::message("error.scriptVoice")
         );
         let mut config = self.config.clone();
-        config.speech_url = url.into();
         config.speech_voice = voice.into();
         atomic_json(&self.config_directory.join("settings.json"), &config)
             .context(crate::i18n::message("error.preferencesSave"))?;
