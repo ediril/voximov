@@ -120,6 +120,8 @@ pub struct Take {
     pub voice: String,
     #[serde(default = "normal_speed")]
     pub speed: f64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub guessed: Vec<String>,
 }
 
 pub const SPEECH_SPEEDS: std::ops::RangeInclusive<f64> = 0.5..=2.;

@@ -144,6 +144,7 @@ fn generated_speech_becomes_the_clip_take_with_its_guessed_words() -> Result<()>
         (take.text.as_str(), take.voice.as_str()),
         (script.text.as_str(), "af_heart")
     );
+    assert_eq!(take.guessed, ["Zorblax"]);
     let asset = store
         .project
         .assets
@@ -275,10 +276,17 @@ fn empty_clips_and_unknown_voices_fail_with_a_reason() -> Result<()> {
     generator.enqueue([empty]);
     let failure = wait_for(&events, GenerationState::Failed).pop().unwrap();
     assert!(failure.error.unwrap().contains("error.scriptEmpty"));
-    commands::execute(
+    let rejected = commands::execute(
         &mut store.lock().unwrap(),
         &json!({"command":"project_voice","voice":"af_bella+af_sky"}),
-    )?;
+    );
+    assert!(
+        rejected
+            .unwrap_err()
+            .to_string()
+            .contains("error.scriptVoice")
+    );
+    store.lock().unwrap().project.voice = Some("ef_dora".into());
     generator.enqueue([script(&store, "Hello there.")?]);
     let failure = wait_for(&events, GenerationState::Failed).pop().unwrap();
     assert!(failure.error.unwrap().contains("error.scriptVoice"));

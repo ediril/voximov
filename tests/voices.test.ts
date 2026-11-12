@@ -7,16 +7,13 @@ afterEach(() => setLanguagePreference('system'))
 describe('voice labels', () => {
   it.each([
     ['af_bella', 'Bella', 'US female'],
-    ['bf_v0emma', 'Emma', 'British female, v0'],
-    ['am_price_inno', 'Price', 'US male, inno'],
-    ['zm_yunxi', 'Yunxi', 'Mandarin Chinese male'],
-    ['pf_dora', 'Dora', 'Brazilian Portuguese female'],
+    ['bm_george', 'George', 'British male'],
   ])('%s is %s, %s', (id, name, description) => {
     setLanguagePreference('en')
     expect(voiceLabel(id)).toEqual({ name, description })
   })
   it('shows ids that do not follow the Kokoro pattern unchanged', () => {
-    for (const id of ['custom-voice', 'af_bella+am_adam', 'xf_bella', 'af_', 'af_v0', 'AF_BELLA'])
+    for (const id of ['custom-voice', 'af_bella+am_adam', 'ef_dora', 'af_', 'AF_BELLA'])
       expect(voiceLabel(id)).toEqual({ name: id, description: '' })
   })
   it('localizes accent and gender', () => {
@@ -67,7 +64,6 @@ describe('voice options', () => {
     setLanguagePreference('en')
     const { featured, others } = groupedVoiceOptions([
       'am_michael',
-      'bf_v0emma',
       'af_sky',
       'bm_lewis',
       'bf_isabella',
@@ -80,7 +76,6 @@ describe('voice options', () => {
     expect(others).toEqual([
       { id: 'bf_alice', label: 'Alice (British female)' },
       { id: 'bf_isabella', label: 'Isabella (British female)' },
-      { id: 'bf_v0emma', label: 'Emma (British female, v0)' },
       { id: 'bm_lewis', label: 'Lewis (British male)' },
       { id: 'af_alloy', label: 'Alloy (US female)' },
       { id: 'af_sky', label: 'Sky (US female)' },

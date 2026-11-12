@@ -282,7 +282,12 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
         }
         "project_voice" => {
             let mut project = store.project.clone();
-            project.voice = value["voice"].as_str().map(Into::into);
+            let voice = value["voice"].as_str();
+            ensure!(
+                voice.is_none_or(crate::voice_model::is_voice),
+                crate::i18n::message("error.scriptVoice")
+            );
+            project.voice = voice.map(Into::into);
             store.replace(project)?;
         }
         _ => bail!(crate::i18n::message("error.editCommand")),

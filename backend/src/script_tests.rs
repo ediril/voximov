@@ -299,6 +299,7 @@ fn script_clips_are_rejected_on_video_tracks_and_without_matching_audio() -> Res
                 text: "Hello".into(),
                 voice: "af_heart".into(),
                 speed: 1.,
+                guessed: vec![],
             }),
         }),
     });
@@ -331,6 +332,7 @@ fn script_clip_plays_its_take_then_silence_and_returns_to_draft_without_it() -> 
             text: "Hello".into(),
             voice: "af_heart".into(),
             speed: 1.,
+            guessed: vec![],
         }),
     });
     store.replace(project)?;

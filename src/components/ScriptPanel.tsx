@@ -110,6 +110,9 @@ export default function ScriptPanel({
           {scriptClips.map(({ trackId, locked, clip }) => {
             const status = scriptStatus(clip)
             const action = scriptRowAction(status.state, clip.script.text, locked)
+            const guessed = clip.script.take?.guessed?.length
+              ? t('script.guessed', { words: clip.script.take.guessed.join(', ') })
+              : null
             return (
               <li key={clip.id}>
                 <button
@@ -127,6 +130,11 @@ export default function ScriptPanel({
                   <span className={`script-chip is-${status.state}`}>
                     {t(statusLabels[status.state])}
                   </span>
+                  {guessed && (
+                    <span className="script-guessed" title={guessed}>
+                      {guessed}
+                    </span>
+                  )}
                 </button>
                 {action && (
                   <button

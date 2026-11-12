@@ -121,7 +121,8 @@ describe('localization catalogs', () => {
   it('numbers default track names in the current language and keeps user names with #', () => {
     for (const [language] of languages) {
       setLanguagePreference(language)
-      expect(localizedName('track.audio#2')).toBe(`${t('track.audio')} 2`)
+      expect(localizedName('track.audio#2')).toBe(t('track.audioNumbered', { number: 2 }))
+      expect(localizedName('track.audio#2')).toContain('2')
     }
     expect(localizedName('Take #2')).toBe('Take #2')
     expect(localizedName('track.nothing#2')).toBe('track.nothing#2')

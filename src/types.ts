@@ -33,6 +33,7 @@ export interface ScriptTake {
   text: string
   voice: string
   speed: number
+  guessed?: string[]
 }
 
 export interface ClipScript {

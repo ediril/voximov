@@ -223,7 +223,12 @@ fn generate(
         &file,
         crate::speech::wav(&speech.samples, speech.sample_rate),
     )?;
-    let take = Take { text, voice, speed };
+    let take = Take {
+        text,
+        voice,
+        speed,
+        guessed: speech.guessed.clone(),
+    };
     let attached = attach(store, job, &file, take);
     let _ = fs::remove_file(&file);
     attached.map(|_| Some(speech.guessed))

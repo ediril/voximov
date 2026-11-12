@@ -43,13 +43,6 @@ export const featuredVoices: readonly string[] = [
 const accents: Readonly<Record<string, TranslationKey>> = {
   a: 'voice.accentAmerican',
   b: 'voice.accentBritish',
-  e: 'voice.accentSpanish',
-  f: 'voice.accentFrench',
-  h: 'voice.accentHindi',
-  i: 'voice.accentItalian',
-  j: 'voice.accentJapanese',
-  p: 'voice.accentBrazilian',
-  z: 'voice.accentMandarin',
 }
 
 const genders: Readonly<Record<string, TranslationKey>> = {
@@ -57,7 +50,7 @@ const genders: Readonly<Record<string, TranslationKey>> = {
   m: 'voice.male',
 }
 
-const voiceIdPattern = /^([abefhijpz])([fm])_(v0)?([a-z]+)(?:_(inno))?$/
+const voiceIdPattern = /^([ab])([fm])_([a-z]+)$/
 
 export interface VoiceLabel {
   name: string
@@ -72,15 +65,13 @@ export interface VoiceOption {
 export function voiceLabel(id: string): VoiceLabel {
   const match = voiceIdPattern.exec(id)
   if (!match) return { name: id, description: '' }
-  const [, accent, gender, version, name, edition] = match
-  const description = t('voice.description', {
-    accent: t(accents[accent]),
-    gender: t(genders[gender]),
-  })
-  const variant = version ?? edition
+  const [, accent, gender, name] = match
   return {
     name: name[0].toUpperCase() + name.slice(1),
-    description: variant ? t('voice.withVariant', { description, variant }) : description,
+    description: t('voice.description', {
+      accent: t(accents[accent]),
+      gender: t(genders[gender]),
+    }),
   }
 }
 
