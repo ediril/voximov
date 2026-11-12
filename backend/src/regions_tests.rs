@@ -67,11 +67,11 @@ fn moving_a_section_splits_all_tracks_and_is_one_undo_step() -> Result<()> {
     )?;
     assert_eq!(store.history.len(), 1);
     assert_eq!(result["regions"].as_array().unwrap().len(), 2);
-    for track in &store.project.tracks[1..] {
+    for (index, track) in store.project.tracks.iter().enumerate().skip(1) {
         assert_eq!(track.clips.len(), 3);
         let moved = track.clips.iter().find(|clip| clip.start == 10.).unwrap();
         assert_eq!(moved.duration, 2.);
-        assert_eq!(moved.offset, if track.kind == "voice" { 3. } else { 1. });
+        assert_eq!(moved.offset, if index == 1 { 3. } else { 1. });
         assert!(track.clips.iter().any(|clip| clip.start == 5.));
     }
     commands::execute(&mut store, &json!({"command":"undo"}))?;
@@ -82,7 +82,7 @@ fn moving_a_section_splits_all_tracks_and_is_one_undo_step() -> Result<()> {
 }
 
 #[test]
-fn voice_clips_move_to_audio_tracks_and_add_only_creates_audio() -> Result<()> {
+fn clips_move_between_audio_tracks_and_added_tracks_get_the_next_free_name() -> Result<()> {
     let (_directory, mut store) = setup()?;
     let clip_id = store.project.tracks[1].clips[0].id.clone();
     let track_id = store.project.tracks[1].id.clone();
@@ -99,19 +99,21 @@ fn voice_clips_move_to_audio_tracks_and_add_only_creates_audio() -> Result<()> {
     assert_eq!(moved.start, 3.);
     assert_eq!(moved.offset, 1.);
     assert_eq!(moved.duration, 8.);
+    let first = store.project.tracks[1].id.clone();
+    commands::execute(
+        &mut store,
+        &json!({"command":"track_remove","trackId":first}),
+    )?;
     commands::execute(&mut store, &json!({"command":"track_add"}))?;
+    commands::execute(&mut store, &json!({"command":"track_add"}))?;
+    let names: Vec<&str> = store.project.tracks[1..]
+        .iter()
+        .map(|track| track.name.as_str())
+        .collect();
+    assert_eq!(names, ["track.audio#2", "track.audio#1", "track.audio#3"]);
     let added = store.project.tracks.last().unwrap();
-    assert_eq!(added.kind, "audio");
+    assert_eq!(added.kind, crate::model::TrackKind::Audio);
     assert!(!added.armed);
-    assert_eq!(
-        store
-            .project
-            .tracks
-            .iter()
-            .filter(|track| track.kind == "voice")
-            .count(),
-        1
-    );
     Ok(())
 }
 

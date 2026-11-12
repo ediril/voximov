@@ -1,6 +1,6 @@
 use crate::{
     commands::{number, text},
-    model::{Clip, Project, SAMPLE_RATE, id},
+    model::{Clip, Project, SAMPLE_RATE, TrackKind, id},
     storage::Store,
 };
 use anyhow::{Context, Result, ensure};
@@ -29,8 +29,8 @@ fn compatible(project: &Project, track: usize, clip: &Clip) -> Result<()> {
     ensure!(!target.locked, crate::i18n::message("error.trackLocked"));
     if clip.script.is_some() {
         ensure!(
-            target.kind == "voice",
-            crate::i18n::message("error.scriptVoiceTrack")
+            target.kind == TrackKind::Audio,
+            crate::i18n::message("error.scriptAudioTrack")
         );
         return Ok(());
     }
@@ -46,7 +46,7 @@ fn compatible(project: &Project, track: usize, clip: &Clip) -> Result<()> {
         .kind
         == "video";
     ensure!(
-        video == (target.kind == "video"),
+        video == (target.kind == TrackKind::Video),
         crate::i18n::message("error.selectCompatibleTrack")
     );
     Ok(())

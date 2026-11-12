@@ -136,7 +136,8 @@ mod tests {
     use super::*;
     #[test]
     fn pan_and_soft_noise_reduction_preserve_finite_audio() {
-        let mut track = Track::new("voice", "Voice");
+        let mut track = Track::new(crate::model::TrackKind::Audio, "Voice");
+        track.fx_bypass = false;
         track.pan = 1.;
         track.effects.gate_reduction = 6.;
         let mut processor = Processor::new(&track.effects);
@@ -147,7 +148,7 @@ mod tests {
     }
     #[test]
     fn rms_compression_changes_audio_and_bypass_preserves_it() {
-        let mut track = Track::new("voice", "Voice");
+        let mut track = Track::new(crate::model::TrackKind::Audio, "Voice");
         track.effects = Effects::neutral();
         track.effects.ratio = 4.;
         track.fx_bypass = false;

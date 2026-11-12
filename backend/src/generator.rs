@@ -173,7 +173,7 @@ fn generate(
     speaker: &mut dyn Speaker,
     job: &Job,
 ) -> Result<Option<Vec<String>>> {
-    let (text, voice) = {
+    let (text, voice, speed) = {
         let mut store = store
             .lock()
             .map_err(|_| anyhow::anyhow!(crate::i18n::message("error.storeUnavailable")))?;
@@ -182,12 +182,18 @@ fn generate(
             .voice
             .clone()
             .unwrap_or_else(|| store.config.speech_voice.clone());
+        let speed = store
+            .project
+            .tracks
+            .iter()
+            .find(|track| track.id == job.track_id)
+            .map_or(1., |track| track.speech_speed);
         let text = find(&mut store.project, job)?
             .script
             .as_ref()
             .map(|script| script.text.clone())
             .unwrap_or_default();
-        (text, voice)
+        (text, voice, speed)
     };
     ensure!(!text.is_empty(), crate::i18n::message("error.scriptEmpty"));
     ensure!(
@@ -202,7 +208,7 @@ fn generate(
         shared.emit(&job.clip_id, state, progress.clamp(0., 1.), None);
         !shared.cancel.load(Ordering::SeqCst)
     };
-    let Some(speech) = speaker.speak(&text, &voice, &mut report)? else {
+    let Some(speech) = speaker.speak(&text, &voice, speed, &mut report)? else {
         return Ok(None);
     };
     if shared.cancel.load(Ordering::SeqCst) {
@@ -217,7 +223,8 @@ fn generate(
         &file,
         crate::speech::wav(&speech.samples, speech.sample_rate),
     )?;
-    let attached = attach(store, job, &file, &text, &voice);
+    let take = Take { text, voice, speed };
+    let attached = attach(store, job, &file, take);
     let _ = fs::remove_file(&file);
     attached.map(|_| Some(speech.guessed))
 }
@@ -227,11 +234,11 @@ fn asset_name(text: &str) -> String {
     format!("{}.wav", words.trim())
 }
 
-fn attach(store: &Mutex<Store>, job: &Job, file: &Path, text: &str, voice: &str) -> Result<()> {
+fn attach(store: &Mutex<Store>, job: &Job, file: &Path, take: Take) -> Result<()> {
     let mut store = store
         .lock()
         .map_err(|_| anyhow::anyhow!(crate::i18n::message("error.storeUnavailable")))?;
-    let decoded = commands::decode_source(&mut store, file, &asset_name(text), "audio")?;
+    let decoded = commands::decode_source(&mut store, file, &asset_name(&take.text), "audio")?;
     let committed = (|| {
         let asset = decoded
             .assets
@@ -242,10 +249,7 @@ fn attach(store: &Mutex<Store>, job: &Job, file: &Path, text: &str, voice: &str)
         let clip = find(&mut project, job)?;
         let previous = clip.asset_id.replace(asset.id.clone());
         if let Some(script) = clip.script.as_mut() {
-            script.take = Some(Take {
-                text: text.into(),
-                voice: voice.into(),
-            });
+            script.take = Some(take);
         }
         project.assets.push(asset);
         if let Some(previous) = previous {

@@ -118,6 +118,14 @@ describe('localization catalogs', () => {
     expect(localizedName(catalogs.ru['track.voice'])).toBe(t('track.voice'))
     expect(localizedName('Custom track')).toBe('Custom track')
   })
+  it('numbers default track names in the current language and keeps user names with #', () => {
+    for (const [language] of languages) {
+      setLanguagePreference(language)
+      expect(localizedName('track.audio#2')).toBe(`${t('track.audio')} 2`)
+    }
+    expect(localizedName('Take #2')).toBe('Take #2')
+    expect(localizedName('track.nothing#2')).toBe('track.nothing#2')
+  })
   it('keeps Cyrillic text inside localization files', () => {
     const offenders = sourceFiles.filter((file) =>
       /\p{Script=Cyrillic}/u.test(readFileSync(file, 'utf8')),

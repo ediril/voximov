@@ -7,8 +7,8 @@ import { neutralEffects, type Track } from '../src/types'
 
 const track: Track = {
   id: 'voice',
-  name: 'track.voice',
-  kind: 'voice',
+  name: 'track.audio#1',
+  kind: 'audio',
   color: '#fff',
   mute: false,
   solo: false,
@@ -18,6 +18,7 @@ const track: Track = {
   volume: 0,
   pan: 0,
   effects: neutralEffects,
+  speechSpeed: 1,
   clips: [
     { id: 'moving', assetId: 'source', name: 'Take', start: 2, offset: 0, duration: 3 },
     { id: 'other', assetId: 'source', name: 'Take', start: 8, offset: 0, duration: 2 },

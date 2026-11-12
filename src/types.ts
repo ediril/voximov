@@ -1,4 +1,4 @@
-export type TrackKind = 'video' | 'voice' | 'audio'
+export type TrackKind = 'video' | 'audio'
 
 export interface EffectSettings {
   highpass: number
@@ -32,6 +32,7 @@ export interface MediaAsset {
 export interface ScriptTake {
   text: string
   voice: string
+  speed: number
 }
 
 export interface ClipScript {
@@ -62,6 +63,7 @@ export interface Track {
   volume: number
   pan: number
   effects: EffectSettings
+  speechSpeed: number
   clips: Clip[]
 }
 

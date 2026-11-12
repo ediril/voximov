@@ -57,15 +57,26 @@ export function useScriptClips({
   const defaultVoice = snapshot?.config.speechVoice ?? ''
   const effectiveVoice = projectVoice ?? defaultVoice
   const assetById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets])
+  const projectTracks = snapshot?.project.tracks
+  const speedByClip = useMemo(
+    () =>
+      new Map(
+        (projectTracks ?? []).flatMap((track) =>
+          track.clips.map((clip) => [clip.id, track.speechSpeed] as const),
+        ),
+      ),
+    [projectTracks],
+  )
   const scriptStatus = useCallback(
     (clip: ScriptClip) =>
       scriptClipStatus(
         clip,
         clip.assetId ? assetById.get(clip.assetId) : undefined,
         effectiveVoice,
+        speedByClip.get(clip.id) ?? 1,
         generations[clip.id],
       ),
-    [assetById, effectiveVoice, generations],
+    [assetById, effectiveVoice, speedByClip, generations],
   )
   const scriptClips = scriptClipsInOrder(tracks)
   const pendingScripts = pendingScriptClips(tracks, scriptStatus)

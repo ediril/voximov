@@ -168,7 +168,7 @@ fn audio_devices_persist_without_editing_projects_or_interrupting_transport() ->
         .project
         .tracks
         .iter_mut()
-        .find(|track| track.kind == "audio")
+        .find(|track| track.kind == crate::model::TrackKind::Audio)
         .unwrap()
         .armed = true;
     session.begin_record(&mut store, 0.)?;

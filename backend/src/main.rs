@@ -24,6 +24,8 @@ mod indexed_archive;
 #[cfg(test)]
 mod integration_tests;
 mod kokoro;
+#[cfg(test)]
+mod kokoro_tests;
 mod lifecycle;
 mod loudness;
 #[cfg(test)]

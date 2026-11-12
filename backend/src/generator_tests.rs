@@ -19,7 +19,7 @@ use std::{
 
 #[derive(Default)]
 struct FakeSpeaker {
-    requests: Arc<Mutex<Vec<(String, String)>>>,
+    requests: Arc<Mutex<Vec<(String, String, f32)>>>,
     sentence_delay: Duration,
     sentences: usize,
 }
@@ -29,12 +29,13 @@ impl Speaker for FakeSpeaker {
         &mut self,
         text: &str,
         voice: &str,
+        speed: f32,
         report: &mut dyn FnMut(Stage, f64) -> bool,
     ) -> Result<Option<Speech>> {
         self.requests
             .lock()
             .unwrap()
-            .push((text.to_owned(), voice.to_owned()));
+            .push((text.to_owned(), voice.to_owned(), speed));
         if !report(Stage::Downloading, 0.5) {
             return Ok(None);
         }
@@ -133,7 +134,7 @@ fn generated_speech_becomes_the_clip_take_with_its_guessed_words() -> Result<()>
     assert_eq!(seen.last().unwrap().guessed, ["Zorblax"]);
     assert_eq!(
         requests.lock().unwrap()[0],
-        ("Welcome to Zorblax at dawn.".into(), "af_heart".into())
+        ("Welcome to Zorblax at dawn.".into(), "af_heart".into(), 1.)
     );
     let store = store.lock().unwrap();
     let clip = &store.project.tracks[1].clips[0];
@@ -155,7 +156,7 @@ fn generated_speech_becomes_the_clip_take_with_its_guessed_words() -> Result<()>
 }
 
 #[test]
-fn regenerating_replaces_the_previous_take_and_uses_the_project_voice() -> Result<()> {
+fn regenerating_replaces_the_previous_take_with_the_project_voice_and_track_speed() -> Result<()> {
     let speaker = FakeSpeaker::default();
     let requests = speaker.requests.clone();
     let (_temporary, store, generator, events) = studio(speaker)?;
@@ -170,11 +171,20 @@ fn regenerating_replaces_the_previous_take_and_uses_the_project_voice() -> Resul
         &mut store.lock().unwrap(),
         &json!({"command":"project_voice","voice":"am_michael"}),
     )?;
+    commands::execute(
+        &mut store.lock().unwrap(),
+        &json!({"command":"track_patch","trackId":job.track_id,"patch":{"speechSpeed":1.25}}),
+    )?;
     generator.enqueue([job]);
     wait_for(&events, GenerationState::Done);
-    assert_eq!(requests.lock().unwrap()[1].1, "am_michael");
+    let request = requests.lock().unwrap()[1].clone();
+    assert_eq!((request.1.as_str(), request.2), ("am_michael", 1.25));
     let store = store.lock().unwrap();
     let clip = &store.project.tracks[1].clips[0];
+    assert_eq!(
+        clip.script.as_ref().unwrap().take.as_ref().unwrap().speed,
+        1.25
+    );
     assert_ne!(clip.asset_id.as_deref(), Some(first.as_str()));
     assert!(store.project.assets.iter().all(|asset| asset.id != first));
     assert_eq!(store.project.assets.len(), 1);

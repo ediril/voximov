@@ -184,7 +184,7 @@ fn matroska_streams_keep_voice_track_order_independent_exports_and_project_histo
     assert_eq!(store.project.assets[0].frames, 0);
     for index in 1..=3 {
         let track = &store.project.tracks[index];
-        assert_eq!(track.kind, "audio");
+        assert_eq!(track.kind, crate::model::TrackKind::Audio);
         assert_eq!(
             track.name,
             format!("procedural [{index}] {}", ["eng", "rus", "deu"][index - 1])

@@ -118,6 +118,22 @@ pub struct Script {
 pub struct Take {
     pub text: String,
     pub voice: String,
+    #[serde(default = "normal_speed")]
+    pub speed: f32,
+}
+
+pub const SPEECH_SPEEDS: std::ops::RangeInclusive<f32> = 0.5..=2.;
+
+fn normal_speed() -> f32 {
+    1.
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TrackKind {
+    Video,
+    #[serde(alias = "voice")]
+    Audio,
 }
 
 pub const MAX_SCRIPT_TEXT: usize = 5000;
@@ -129,7 +145,7 @@ pub const MIN_SCRIPT_SLOT: f64 = 0.25;
 pub struct Track {
     pub id: String,
     pub name: String,
-    pub kind: String,
+    pub kind: TrackKind,
     pub color: String,
     pub mute: bool,
     pub solo: bool,
@@ -139,32 +155,33 @@ pub struct Track {
     pub volume: f32,
     pub pan: f32,
     pub effects: Effects,
+    #[serde(default = "normal_speed")]
+    pub speech_speed: f32,
     pub clips: Vec<Clip>,
 }
 impl Track {
-    pub fn new(kind: &str, name: &str) -> Self {
+    pub fn new(kind: TrackKind, name: &str) -> Self {
         Self {
             id: id(),
             name: name.into(),
-            kind: kind.into(),
+            kind,
             color: match kind {
-                "video" => "#a5bbeb",
-                "voice" => "#d6ee9b",
-                _ => "#dab9e9",
+                TrackKind::Video => "#a5bbeb",
+                TrackKind::Audio => "#d6ee9b",
             }
             .into(),
             mute: false,
             solo: false,
             locked: false,
-            armed: kind == "voice",
-            fx_bypass: kind != "voice",
+            armed: false,
+            fx_bypass: true,
             volume: 0.,
             pan: 0.,
-            effects: if kind == "voice" {
-                Effects::voice()
-            } else {
-                Effects::neutral()
+            effects: match kind {
+                TrackKind::Video => Effects::neutral(),
+                TrackKind::Audio => Effects::voice(),
             },
+            speech_speed: normal_speed(),
             clips: vec![],
         }
     }
@@ -235,18 +252,29 @@ pub struct Project {
 }
 impl Project {
     pub fn new() -> Self {
-        Self {
+        let mut project = Self {
             version: 3,
             id: id(),
             name: "project.defaultName".into(),
-            tracks: vec![
-                Track::new("video", "track.video"),
-                Track::new("voice", "track.voice"),
-                Track::new("audio", "track.music"),
-            ],
+            tracks: vec![Track::new(TrackKind::Video, "track.video")],
             assets: vec![],
             voice: None,
+        };
+        for _ in 0..2 {
+            let track = project.audio_track();
+            project.tracks.push(track);
         }
+        project.tracks[1].armed = true;
+        project
+    }
+    pub fn audio_track(&self) -> Track {
+        let number = (1..)
+            .find(|number| {
+                let name = audio_track_name(*number);
+                self.tracks.iter().all(|track| track.name != name)
+            })
+            .unwrap_or_default();
+        Track::new(TrackKind::Audio, &audio_track_name(number))
     }
     pub fn duration(&self) -> f64 {
         self.tracks
@@ -256,7 +284,10 @@ impl Project {
             .fold(0., f64::max)
     }
     pub fn frame_rate_asset(&self) -> Option<&Asset> {
-        let track = self.tracks.iter().find(|track| track.kind == "video")?;
+        let track = self
+            .tracks
+            .iter()
+            .find(|track| track.kind == TrackKind::Video)?;
         track
             .clips
             .iter()
@@ -322,14 +353,11 @@ impl Project {
                 crate::i18n::message("error.duplicateId")
             );
             ensure!(
-                ["audio", "video", "voice"].contains(&t.kind.as_str()),
-                crate::i18n::message("error.trackType")
-            );
-            ensure!(
                 t.volume.is_finite()
                     && (-60. ..=12.).contains(&t.volume)
                     && t.pan.is_finite()
-                    && (-1. ..=1.).contains(&t.pan),
+                    && (-1. ..=1.).contains(&t.pan)
+                    && SPEECH_SPEEDS.contains(&t.speech_speed),
                 crate::i18n::message("error.mixer")
             );
             ensure!(
@@ -339,7 +367,7 @@ impl Project {
             t.effects.validate()?;
             armed += usize::from(t.armed);
             ensure!(
-                !t.armed || t.kind != "video",
+                !t.armed || t.kind == TrackKind::Audio,
                 crate::i18n::message("error.trackCannotRecord")
             );
             for c in &t.clips {
@@ -368,7 +396,7 @@ impl Project {
                 match (&c.script, asset) {
                     (Some(script), asset) => {
                         ensure!(
-                            t.kind != "video"
+                            t.kind == TrackKind::Audio
                                 && c.offset == 0.
                                 && script.text.len() <= MAX_SCRIPT_TEXT
                                 && script.take.is_some() == asset.is_some()
@@ -390,4 +418,8 @@ impl Project {
         );
         Ok(())
     }
+}
+
+fn audio_track_name(number: usize) -> String {
+    format!("track.audio#{number}")
 }

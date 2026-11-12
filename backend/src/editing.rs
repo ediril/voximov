@@ -1,6 +1,6 @@
 use crate::commands::{number, text};
 use crate::{
-    model::{Clip, MIN_SCRIPT_SLOT, Project, SAMPLE_RATE, Script, Track, id},
+    model::{Clip, MIN_SCRIPT_SLOT, Project, SAMPLE_RATE, Script, Track, TrackKind, id},
     storage::Store,
 };
 use anyhow::{Context, Result, bail, ensure};
@@ -77,7 +77,8 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
         }
         "track_add" => {
             let mut project = store.project.clone();
-            project.tracks.push(Track::new("audio", "track.audio"));
+            let track = project.audio_track();
+            project.tracks.push(track);
             store.replace(project)?;
         }
         "track_remove" => {
@@ -110,8 +111,16 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
             for (key, val) in patch {
                 ensure!(
                     [
-                        "name", "mute", "solo", "locked", "armed", "fxBypass", "volume", "pan",
-                        "effects"
+                        "name",
+                        "mute",
+                        "solo",
+                        "locked",
+                        "armed",
+                        "fxBypass",
+                        "volume",
+                        "pan",
+                        "effects",
+                        "speechSpeed"
                     ]
                     .contains(&key.as_str()),
                     crate::i18n::message("error.trackField")
@@ -141,7 +150,7 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
                 .find(|t| Some(t.id.as_str()) == value["trackId"].as_str())
                 .context(crate::i18n::message("error.trackMissing"))?;
             ensure!(
-                !track.locked && (asset.kind == "video") == (track.kind == "video"),
+                !track.locked && (asset.kind == "video") == (track.kind == TrackKind::Video),
                 crate::i18n::message("error.selectCompatibleTrack")
             );
             track.clips.push(Clip {
@@ -235,8 +244,8 @@ pub fn execute(store: &mut Store, value: &Value) -> Result<()> {
                 crate::i18n::message("error.selectCompatibleTrack")
             );
             ensure!(
-                track.kind == "voice",
-                crate::i18n::message("error.scriptVoiceTrack")
+                track.kind == TrackKind::Audio,
+                crate::i18n::message("error.scriptAudioTrack")
             );
             let clip_id = text(value, "clipId")?;
             uuid::Uuid::parse_str(clip_id)?;

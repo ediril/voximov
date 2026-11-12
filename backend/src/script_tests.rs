@@ -2,7 +2,7 @@ use crate::{
     commands,
     media::wav_header,
     mixer::Mixer,
-    model::{Clip, Project, SAMPLE_RATE, Script, Take, id},
+    model::{Clip, Project, SAMPLE_RATE, Script, Take, TrackKind, id},
     storage::Store,
 };
 use anyhow::Result;
@@ -138,8 +138,8 @@ fn script_clips_cannot_be_split_or_partially_edited() -> Result<()> {
     Ok(())
 }
 
-fn voice_track_error(result: Result<impl Sized>) -> bool {
-    result.is_err_and(|error| error.to_string().contains("error.scriptVoiceTrack"))
+fn audio_track_error(result: Result<impl Sized>) -> bool {
+    result.is_err_and(|error| error.to_string().contains("error.scriptAudioTrack"))
 }
 
 fn draft_clip(text: &str) -> Clip {
@@ -158,51 +158,70 @@ fn draft_clip(text: &str) -> Clip {
 }
 
 #[test]
-fn script_clips_are_added_only_on_the_voice_track() -> Result<()> {
+fn script_clips_go_on_any_audio_track_but_not_the_video_track() -> Result<()> {
     let temporary = tempfile::tempdir()?;
     let mut store = new_store(temporary.path())?;
-    assert_eq!(store.project.tracks[1].kind, "voice");
-    assert_eq!(store.project.tracks[2].kind, "audio");
-    assert!(voice_track_error(add_script(&mut store, 2, 0., 2.)));
-    assert!(voice_track_error(add_script(&mut store, 0, 0., 2.)));
-    assert!(store.project.tracks[2].clips.is_empty());
-    let clip_id = add_script(&mut store, 1, 0., 2.)?;
-    assert!(
-        store.project.tracks[1]
-            .clips
-            .iter()
-            .any(|clip| clip.id == clip_id)
-    );
+    assert!(audio_track_error(add_script(&mut store, 0, 0., 2.)));
+    assert!(store.project.tracks[0].clips.is_empty());
+    for index in [1, 2] {
+        let clip_id = add_script(&mut store, index, 0., 2.)?;
+        assert!(
+            store.project.tracks[index]
+                .clips
+                .iter()
+                .any(|clip| clip.id == clip_id)
+        );
+    }
     Ok(())
 }
 
 #[test]
-fn script_clips_cannot_be_moved_or_pasted_onto_other_tracks() -> Result<()> {
+fn projects_saved_with_a_voice_track_open_with_plain_audio_tracks() -> Result<()> {
+    let temporary = tempfile::tempdir()?;
+    let store = new_store(temporary.path())?;
+    let mut saved = serde_json::to_value(&store.project)?;
+    saved["tracks"][1]["kind"] = json!("voice");
+    saved["tracks"][1]["name"] = json!("track.voice");
+    saved["tracks"][1]
+        .as_object_mut()
+        .unwrap()
+        .remove("speechSpeed");
+    let project: Project = serde_json::from_value(saved)?;
+    project.validate()?;
+    assert_eq!(project.tracks[1].kind, TrackKind::Audio);
+    assert_eq!(project.tracks[1].name, "track.voice");
+    assert_eq!(project.tracks[1].speech_speed, 1.);
+    Ok(())
+}
+
+#[test]
+fn script_clips_move_and_paste_between_audio_tracks_but_not_onto_video() -> Result<()> {
     let temporary = tempfile::tempdir()?;
     let mut store = new_store(temporary.path())?;
     let clip_id = add_script(&mut store, 1, 0., 4.)?;
-    let voice_id = store.project.tracks[1].id.clone();
-    let music_id = store.project.tracks[2].id.clone();
+    let video_id = store.project.tracks[0].id.clone();
+    let first_id = store.project.tracks[1].id.clone();
     let project_id = store.project.id.clone();
-    assert!(voice_track_error(run(
-        &mut store,
-        json!({"command":"regions_edit","regions":[{"trackId":voice_id,"clipId":clip_id,"from":0.,"to":4.}],"delta":1.,"trackOffset":1}),
-    )));
-    assert!(store.project.tracks[2].clips.is_empty());
-    assert_eq!(script_clip(&store, &clip_id).start, 0.);
-    let copied = draft_clip("Copied line");
-    assert!(voice_track_error(run(
-        &mut store,
-        json!({"command":"clips_paste","projectId":project_id,"trackId":music_id,"position":5.,"clips":[{"trackOffset":0,"clip":copied}]}),
-    )));
-    assert!(voice_track_error(run(
-        &mut store,
-        json!({"command":"clips_paste","projectId":project_id,"trackId":voice_id,"position":5.,"clips":[{"trackOffset":0,"clip":copied},{"trackOffset":1,"clip":copied}]}),
-    )));
-    assert!(store.project.tracks[2].clips.is_empty());
     run(
         &mut store,
-        json!({"command":"clips_paste","projectId":project_id,"trackId":voice_id,"position":5.,"clips":[{"trackOffset":0,"clip":copied}]}),
+        json!({"command":"regions_edit","regions":[{"trackId":first_id,"clipId":clip_id,"from":0.,"to":4.}],"delta":1.,"trackOffset":1}),
+    )?;
+    assert!(store.project.tracks[1].clips.is_empty());
+    assert!(
+        store.project.tracks[2]
+            .clips
+            .iter()
+            .any(|clip| clip.start == 1. && clip.script.is_some())
+    );
+    let copied = draft_clip("Copied line");
+    assert!(audio_track_error(run(
+        &mut store,
+        json!({"command":"clips_paste","projectId":project_id,"trackId":video_id,"position":5.,"clips":[{"trackOffset":0,"clip":copied}]}),
+    )));
+    assert!(store.project.tracks[0].clips.is_empty());
+    run(
+        &mut store,
+        json!({"command":"clips_paste","projectId":project_id,"trackId":first_id,"position":5.,"clips":[{"trackOffset":0,"clip":copied}]}),
     )?;
     assert!(
         store.project.tracks[1]
@@ -260,6 +279,7 @@ fn script_clips_are_rejected_on_video_tracks_and_without_matching_audio() -> Res
             take: Some(Take {
                 text: "Hello".into(),
                 voice: "af_heart".into(),
+                speed: 1.,
             }),
         }),
     });
@@ -291,6 +311,7 @@ fn script_clip_plays_its_take_then_silence_and_returns_to_draft_without_it() -> 
         take: Some(Take {
             text: "Hello".into(),
             voice: "af_heart".into(),
+            speed: 1.,
         }),
     });
     store.replace(project)?;

@@ -212,6 +212,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tl-track-name-input {
+  background: #111612;
+  border: 1px solid #5d6659;
+  border-radius: 3px;
+  color: #e9efe3;
+  flex: 1;
+  font-size: 11px !important;
+  font-weight: 550 !important;
+  height: 18px;
+  min-width: 0;
+  padding: 0 4px;
+}
+.tl-track-name-input:focus {
+  border-color: var(--tl-track-color);
+  outline: none;
+}
 .tl-track-db {
   color: #969e91;
   font-family: 'SFMono-Regular', Consolas, monospace;
@@ -317,6 +333,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.tl-track-speed {
+  appearance: none;
+  background: transparent;
+  border: 1px solid #3d443a;
+  border-radius: 3px;
+  color: #a7b09f;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: 'SFMono-Regular', Consolas, monospace !important;
+  font-size: 8px !important;
+  height: 14px;
+  margin-left: auto;
+  padding: 0 4px;
+}
+.tl-track-speed:hover:not(:disabled) {
+  border-color: #c4ceba;
+  color: #e9efe3;
+}
+.tl-track-speed:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 .tl-lane {
   background: #15171a;

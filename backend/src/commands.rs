@@ -1,6 +1,6 @@
 use crate::{
     media, mixer,
-    model::{Asset, Clip, MAX_UPLOAD, SAMPLE_RATE, Track, id},
+    model::{Asset, Clip, MAX_UPLOAD, SAMPLE_RATE, Track, TrackKind, id},
     native_files,
     storage::Store,
     video_export,
@@ -129,24 +129,19 @@ pub fn import_source(
             .position(|t| {
                 !t.locked
                     && if kind == "video" {
-                        t.kind == "video"
+                        t.kind == TrackKind::Video
                     } else {
-                        target.as_ref().is_some_and(|id| id == &t.id) && t.kind != "video"
+                        target.as_ref().is_some_and(|id| id == &t.id) && t.kind == TrackKind::Audio
                     }
             })
             .unwrap_or_else(|| {
-                let track = Track::new(
-                    &kind,
-                    if kind == "video" {
-                        "track.video"
-                    } else {
-                        "track.audio"
-                    },
-                );
                 if kind == "video" {
-                    project.tracks.insert(0, track);
+                    project
+                        .tracks
+                        .insert(0, Track::new(TrackKind::Video, "track.video"));
                     0
                 } else {
+                    let track = project.audio_track();
                     project.tracks.push(track);
                     project.tracks.len() - 1
                 }
@@ -175,7 +170,7 @@ pub fn import_source(
                 .file_stem()
                 .unwrap_or_default()
                 .to_string_lossy();
-            let mut track = Track::new("audio", &track_name);
+            let mut track = Track::new(TrackKind::Audio, &track_name);
             track.mute = stream_index > 0;
             track.clips.push(Clip {
                 id: id(),

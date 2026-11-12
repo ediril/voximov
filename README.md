@@ -69,13 +69,21 @@ GitHub-hosted runners. The app needs the WebView2 Runtime.
 ## Quick start
 
 1. Open the menu at the top left and import a video, or drop it on the window.
-2. Put on headphones, move the playhead, and press <kbd>R</kbd> to record on the **My voice**
-   track while the other tracks play. Press <kbd>R</kbd> again to finish.
+2. Put on headphones, move the playhead, and press <kbd>R</kbd> to record on the armed audio track
+   while the other tracks play. Press <kbd>R</kbd> again to finish. The **R** button on a track
+   header arms it.
 3. Edit: split every track at the playhead with <kbd>S</kbd>, select with <kbd>V</kbd>, and drag
    clips or their edges.
 4. Shape your voice in the **Effects** tab and balance the tracks in the **Mixer** tab.
 5. Export the mix, or a single track from the mixer, as WAV or MP3, or export the video as MP4.
    Save the project with <kbd>Cmd</kbd>+<kbd>S</kbd>.
+
+## Tracks
+
+A project has one video track and any number of audio tracks. All audio tracks work the same way:
+each can hold recordings, imported audio, music and script clips. Double-click a track name to
+rename it. A muted track is left out of playback and every export, so muting the video track
+removes the video's own sound from the exported MP4.
 
 ## AI voiceover
 
@@ -89,14 +97,14 @@ speech works offline.
 To write a voiceover:
 
 1. Select the **Script** tool in the timeline toolbar.
-2. Drag across the **My voice** track to create a script clip. Its width is the time the speech
-   may take.
+2. Drag across any audio track to create a script clip. Its width is the time the speech may take.
 3. Double-click the clip, type the text, and press <kbd>Enter</kbd>. The clip generates in the
    background.
 
 If the speech is longer than the clip, the rest appears as a faded overflow; drag the clip's right
 edge or double-click the overflow to fit it. Choose the voice for the project in the **Script** tab
-and the default voice in **Settings**.
+and the default voice in **Settings**. The speed menu on each audio track's header sets how fast
+its voiceover speaks; changing it marks that track's takes for regeneration.
 
 Voximov knows most English words and common tech terms such as Kubernetes, npm and JSON. For any
 other word it guesses the pronunciation and tells you which words it guessed, so you can listen

@@ -205,6 +205,7 @@ export default function TimelineTrack({
                   asset={asset}
                   locked={track.locked}
                   color={track.color}
+                  speed={track.speechSpeed}
                   waveformOffset={clip.offset + crop}
                   waveformDuration={visibleWidth / pixelsPerSecond}
                   width={visibleWidth}

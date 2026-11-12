@@ -29,14 +29,14 @@ const scriptClip = (overrides: Partial<ScriptClip> = {}): ScriptClip => ({
   start: 2,
   offset: 0,
   duration: 4,
-  script: { text: 'Hello there', take: { text: 'Hello there', voice: 'af_heart' } },
+  script: { text: 'Hello there', take: { text: 'Hello there', voice: 'af_heart', speed: 1 } },
   ...overrides,
 })
 
 const track = (id: string, clips: Clip[], locked = false): Track => ({
   id,
-  name: 'track.voice',
-  kind: 'voice',
+  name: 'track.audio#1',
+  kind: 'audio',
   color: '#fff',
   mute: false,
   solo: false,
@@ -46,6 +46,7 @@ const track = (id: string, clips: Clip[], locked = false): Track => ({
   volume: 0,
   pan: 0,
   effects: neutralEffects,
+  speechSpeed: 1,
   clips,
 })
 
@@ -57,12 +58,15 @@ describe('script clip status', () => {
     clip: ScriptClip
     asset?: { duration: number }
     voice?: string
+    speed?: number
     generation?: ActiveGeneration
     expected: ReturnType<typeof scriptClipStatus>
   }[] = [
     {
       name: 'generating wins over a stale overflowing take',
-      clip: scriptClip({ script: { text: 'New', take: { text: 'Old', voice: 'af_heart' } } }),
+      clip: scriptClip({
+        script: { text: 'New', take: { text: 'Old', voice: 'af_heart', speed: 1 } },
+      }),
       asset: { duration: 9 },
       generation: generating,
       expected: { state: 'generating', progress: 0.4 },
@@ -86,7 +90,7 @@ describe('script clip status', () => {
     {
       name: 'stale when the text changed, even if the audio overflows',
       clip: scriptClip({
-        script: { text: 'Hello again', take: { text: 'Hello there', voice: 'af_heart' } },
+        script: { text: 'Hello again', take: { text: 'Hello there', voice: 'af_heart', speed: 1 } },
       }),
       asset: { duration: 6 },
       expected: { state: 'stale' },
@@ -96,6 +100,13 @@ describe('script clip status', () => {
       clip: scriptClip(),
       asset: { duration: 3 },
       voice: 'bm_george',
+      expected: { state: 'stale' },
+    },
+    {
+      name: 'stale when the track speed changed',
+      clip: scriptClip(),
+      asset: { duration: 3 },
+      speed: 1.2,
       expected: { state: 'stale' },
     },
     {
@@ -117,24 +128,31 @@ describe('script clip status', () => {
       expected: { state: 'fits' },
     },
   ]
-  it.each(cases)('$name', ({ clip, asset, voice, generation, expected }) => {
-    expect(scriptClipStatus(clip, asset, voice ?? 'af_heart', generation)).toEqual(expected)
+  it.each(cases)('$name', ({ clip, asset, voice, speed, generation, expected }) => {
+    expect(scriptClipStatus(clip, asset, voice ?? 'af_heart', speed ?? 1, generation)).toEqual(
+      expected,
+    )
   })
 })
 
 describe('speech estimate and fill bar', () => {
   it('estimates 2.5 words per second, ignoring extra whitespace', () => {
-    expect(estimatedSpeechSeconds('')).toBe(0)
-    expect(estimatedSpeechSeconds('  one   two\tthree four five  ')).toBe(2)
-    expect(estimatedSpeechSeconds('word '.repeat(10))).toBe(4)
+    expect(estimatedSpeechSeconds('', 1)).toBe(0)
+    expect(estimatedSpeechSeconds('  one   two\tthree four five  ', 1)).toBe(2)
+    expect(estimatedSpeechSeconds('word '.repeat(10), 1)).toBe(4)
+  })
+  it('expects faster tracks to need less time', () => {
+    expect(estimatedSpeechSeconds('word '.repeat(10), 1.25)).toBe(3.2)
+    expect(fillRatio('word '.repeat(10), 3.6, 1).level).toBe('over')
+    expect(fillRatio('word '.repeat(10), 3.6, 1.25).level).toBe('tight')
   })
   it('switches from ok to tight at 0.85 and to over above 1', () => {
     const tenWords = 'word '.repeat(10)
-    expect(fillRatio(tenWords, 8)).toEqual({ ratio: 0.5, level: 'ok' })
-    expect(fillRatio(tenWords, 4 / 0.84).level).toBe('ok')
-    expect(fillRatio(tenWords, 4 / 0.85).level).toBe('tight')
-    expect(fillRatio(tenWords, 4)).toEqual({ ratio: 1, level: 'tight' })
-    expect(fillRatio(tenWords, 3.9).level).toBe('over')
+    expect(fillRatio(tenWords, 8, 1)).toEqual({ ratio: 0.5, level: 'ok' })
+    expect(fillRatio(tenWords, 4 / 0.84, 1).level).toBe('ok')
+    expect(fillRatio(tenWords, 4 / 0.85, 1).level).toBe('tight')
+    expect(fillRatio(tenWords, 4, 1)).toEqual({ ratio: 1, level: 'tight' })
+    expect(fillRatio(tenWords, 3.9, 1).level).toBe('over')
   })
 })
 
@@ -173,7 +191,7 @@ describe('script clip commands', () => {
     const early = scriptClip({
       id: 'early',
       start: 1,
-      script: { text: 'Changed', take: { text: 'Hello there', voice: 'af_heart' } },
+      script: { text: 'Changed', take: { text: 'Hello there', voice: 'af_heart', speed: 1 } },
     })
     const empty = scriptClip({ id: 'empty', assetId: null, script: { text: '   ' } })
     const ready = scriptClip({ id: 'ready' })
@@ -197,6 +215,7 @@ describe('script clip commands', () => {
         clip,
         clip.assetId ? { duration: 3 } : undefined,
         'af_heart',
+        1,
         clip.id === 'busy' ? { state: 'queued', progress: 0 } : undefined,
       )
     expect(pendingScriptClips(tracks, status)).toEqual([
@@ -245,13 +264,13 @@ describe('saving script text', () => {
 })
 
 describe('script drawing target', () => {
-  it('draws only on existing, unlocked voice tracks', () => {
-    const voice = track('voice', [])
-    const audio = { ...track('audio', []), kind: 'audio' as const }
+  it('draws on any existing, unlocked audio track', () => {
+    const first = track('first', [])
+    const second = track('second', [])
     const video = { ...track('video', []), kind: 'video' as const }
-    const tracks = [voice, audio, video, track('locked', [], true)]
-    expect(scriptDrawTarget(tracks, 'voice')).toBe(voice)
-    expect(scriptDrawTarget(tracks, 'audio')).toBeUndefined()
+    const tracks = [first, second, video, track('locked', [], true)]
+    expect(scriptDrawTarget(tracks, 'first')).toBe(first)
+    expect(scriptDrawTarget(tracks, 'second')).toBe(second)
     expect(scriptDrawTarget(tracks, 'video')).toBeUndefined()
     expect(scriptDrawTarget(tracks, 'locked')).toBeUndefined()
     expect(scriptDrawTarget(tracks, 'removed')).toBeUndefined()

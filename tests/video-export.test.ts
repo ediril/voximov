@@ -24,6 +24,7 @@ const track = (kind: TrackKind, clips: Clip[]): Track => ({
   volume: 0,
   pan: 0,
   effects: neutralEffects,
+  speechSpeed: 1,
   clips,
 })
 
@@ -36,7 +37,7 @@ describe('video export availability', () => {
   it('needs a video clip on the first video track', () => {
     expect(hasExportableVideo([track('video', [clip('film')])], assets)).toBe(true)
     expect(
-      hasExportableVideo([track('voice', [clip('music')]), track('video', [clip('film')])], assets),
+      hasExportableVideo([track('audio', [clip('music')]), track('video', [clip('film')])], assets),
     ).toBe(true)
   })
   it('stays unavailable without one', () => {

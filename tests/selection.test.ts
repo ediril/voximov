@@ -10,7 +10,7 @@ import {
   wholeRegion,
 } from '../src/timeline/selection'
 
-const tracks: Track[] = ['video', 'voice', 'audio', 'audio'].map((kind, index) => ({
+const tracks: Track[] = ['video', 'audio', 'audio', 'audio'].map((kind, index) => ({
   id: `track-${index}`,
   name: `Track ${index}`,
   kind: kind as Track['kind'],
@@ -18,11 +18,12 @@ const tracks: Track[] = ['video', 'voice', 'audio', 'audio'].map((kind, index) =
   mute: false,
   solo: false,
   locked: false,
-  armed: kind === 'voice',
+  armed: index === 1,
   fxBypass: true,
   volume: 0,
   pan: 0,
   effects: neutralEffects,
+  speechSpeed: 1,
   clips:
     index === 1 || index === 2
       ? [

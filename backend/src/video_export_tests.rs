@@ -262,7 +262,7 @@ fn projects_without_video_clips_cannot_export_video() -> Result<()> {
     assert_eq!(error.to_string(), "[[error.noExportVideo]]");
     let source = asset("video", 5.);
     let mut second_track_only = project(vec![], vec![source.clone()], 5.);
-    let mut track = Track::new("video", "track.video");
+    let mut track = Track::new(crate::model::TrackKind::Video, "track.video");
     track.clips.push(clip(&source, 0., 0., 5.));
     second_track_only.tracks.push(track);
     assert!(!has_video(&second_track_only));
@@ -806,7 +806,8 @@ fn loudness_analysis_stops_when_the_export_is_cancelled() -> Result<()> {
         .clips
         .push(clip(&voice, 0., 0., 10.));
     store.project.assets.push(voice);
-    assert!(store.project.tracks[1].effects.normalize && !store.project.tracks[1].fx_bypass);
+    store.project.tracks[1].fx_bypass = false;
+    assert!(store.project.tracks[1].effects.normalize);
     let operation = store.cancellation.begin(TICKET);
     store.cancellation.request(TICKET);
     let error = Mixer::with_selection(&store, None, None).err().unwrap();

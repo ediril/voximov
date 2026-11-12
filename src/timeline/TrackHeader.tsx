@@ -1,15 +1,67 @@
+import { useRef, useState } from 'react'
 import { localizedName, t } from '../i18n'
-import {
-  AudioLines,
-  LockKeyhole,
-  Mic,
-  Trash2,
-  UnlockKeyhole,
-  Video,
-  WandSparkles,
-} from 'lucide-react'
+import { AudioLines, LockKeyhole, Trash2, UnlockKeyhole, Video, WandSparkles } from 'lucide-react'
 import type { Track } from '../types'
 import TrackMeter from './TrackMeter'
+
+const speechSpeeds = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5]
+const maxTrackName = 120
+
+const speedOptions = (current: number) =>
+  speechSpeeds.includes(current) ? speechSpeeds : [...speechSpeeds, current].sort((a, b) => a - b)
+
+const stopPropagation = (event: { stopPropagation: () => void }) => event.stopPropagation()
+
+function TrackName({
+  track,
+  soloHint,
+  onRename,
+}: {
+  track: Track
+  soloHint?: string
+  onRename: (name: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const cancelled = useRef(false)
+  const name = localizedName(track.name)
+  if (!editing)
+    return (
+      <button
+        className="tl-track-name"
+        title={soloHint ?? t('track.renameHint', { name })}
+        onDoubleClick={(event) => {
+          event.stopPropagation()
+          cancelled.current = false
+          setEditing(true)
+        }}
+      >
+        {name}
+      </button>
+    )
+  return (
+    <input
+      className="tl-track-name-input"
+      aria-label={t('track.nameLabel')}
+      defaultValue={name}
+      maxLength={maxTrackName}
+      autoFocus
+      onFocus={(event) => event.currentTarget.select()}
+      onClick={stopPropagation}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur()
+        if (event.key === 'Escape') {
+          cancelled.current = true
+          event.currentTarget.blur()
+        }
+      }}
+      onBlur={(event) => {
+        const renamed = event.currentTarget.value.trim()
+        setEditing(false)
+        if (!cancelled.current && renamed && renamed !== name) onRename(renamed)
+      }}
+    />
+  )
+}
 
 interface Props {
   track: Track
@@ -37,20 +89,12 @@ export default function TrackHeader({
     <div className="tl-track-header" onClick={() => onSelectTrack(track.id)}>
       <div className="tl-track-heading">
         <span className="tl-track-number">{(index + 1).toString().padStart(2, '0')}</span>
-        {track.kind === 'video' ? (
-          <Video size={13} />
-        ) : track.kind === 'voice' ? (
-          <Mic size={13} />
-        ) : (
-          <AudioLines size={13} />
-        )}
-        <button
-          className="tl-track-name"
-          onClick={() => onSelectTrack(track.id)}
-          title={soloHint ?? localizedName(track.name)}
-        >
-          {localizedName(track.name)}
-        </button>
+        {track.kind === 'video' ? <Video size={13} /> : <AudioLines size={13} />}
+        <TrackName
+          track={track}
+          soloHint={soloHint}
+          onRename={(name) => onUpdateTrack(track.id, { name })}
+        />
         <span className="tl-track-db">
           {track.volume > 0 ? '+' : ''}
           {track.volume.toFixed(1)}
@@ -126,6 +170,25 @@ export default function TrackHeader({
                     ? t('track.videoAudio')
                     : t('track.audioTrack')}
             </span>
+            {track.kind === 'audio' && (
+              <select
+                className="tl-track-speed"
+                title={t('track.speechSpeed')}
+                aria-label={t('track.speechSpeedLabel', { value0: localizedName(track.name) })}
+                value={track.speechSpeed}
+                disabled={recording || operationPending}
+                onClick={stopPropagation}
+                onChange={(event) =>
+                  onUpdateTrack(track.id, { speechSpeed: Number(event.target.value) })
+                }
+              >
+                {speedOptions(track.speechSpeed).map((speed) => (
+                  <option key={speed} value={speed}>
+                    {t('track.speechSpeedValue', { speed })}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               className="tl-track-delete"
               title={t('track.delete', { name: localizedName(track.name) })}

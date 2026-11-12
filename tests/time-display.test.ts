@@ -150,6 +150,7 @@ const track = (clips: Clip[], locked = false): Track => ({
   volume: 0,
   pan: 0,
   effects: neutralEffects,
+  speechSpeed: 1,
   clips,
 })
 

@@ -2,7 +2,7 @@ use crate::{
     dsp::Processor,
     media::{Peaks, finite, wav_header},
     mixer::Mixer,
-    model::{Asset, Clip, MAX_UPLOAD, SAMPLE_RATE, id},
+    model::{Asset, Clip, MAX_UPLOAD, SAMPLE_RATE, TrackKind, id},
     storage::Store,
 };
 use anyhow::{Context, Result, bail, ensure};
@@ -50,7 +50,7 @@ impl AudioSession {
             .project
             .tracks
             .iter()
-            .find(|t| t.armed && t.kind != "video")
+            .find(|t| t.armed && t.kind == TrackKind::Audio)
             .context(crate::i18n::message("error.armTrack"))?
             .clone();
         self.mixer = None;

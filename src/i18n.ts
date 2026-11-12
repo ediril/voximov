@@ -85,6 +85,9 @@ export function t(key: TranslationKey, params: TranslationParams = {}): string {
 }
 
 export function localizedName(name: string): string {
+  const numbered = /^(track\.[A-Za-z]+)#(\d+)$/.exec(name)
+  if (numbered && Object.hasOwn(en, numbered[1]))
+    return `${t(numbered[1] as TranslationKey)} ${numbered[2]}`
   if (Object.hasOwn(en, name) && /^(track\.|project\.)/.test(name)) return t(name as TranslationKey)
   const key = (
     ['track.video', 'track.voice', 'track.music', 'track.audio', 'project.defaultName'] as const

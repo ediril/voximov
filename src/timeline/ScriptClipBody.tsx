@@ -12,6 +12,7 @@ export default function ScriptClipBody({
   asset,
   locked,
   color,
+  speed,
   waveformOffset,
   waveformDuration,
   width,
@@ -23,6 +24,7 @@ export default function ScriptClipBody({
   asset?: MediaAsset
   locked: boolean
   color: string
+  speed: number
   waveformOffset: number
   waveformDuration: number
   width: number
@@ -31,7 +33,7 @@ export default function ScriptClipBody({
 }) {
   const text = clip.script.text
   const audible = status.state === 'fits' || status.state === 'stale' || status.state === 'overflow'
-  const fill = fillRatio(text, clip.duration)
+  const fill = fillRatio(text, clip.duration, speed)
   return (
     <>
       <div className="tl-clip-heading">

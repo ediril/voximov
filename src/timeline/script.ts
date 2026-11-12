@@ -29,13 +29,17 @@ export type FillLevel = 'ok' | 'tight' | 'over'
 
 export const isScriptClip = (clip: Clip): clip is ScriptClip => !!clip.script
 
-export function estimatedSpeechSeconds(text: string) {
+export function estimatedSpeechSeconds(text: string, speed: number) {
   const words = text.split(/\s+/).filter(Boolean).length
-  return words / speechWordsPerSecond
+  return words / speechWordsPerSecond / speed
 }
 
-export function fillRatio(text: string, boxSeconds: number): { ratio: number; level: FillLevel } {
-  const ratio = boxSeconds > 0 ? estimatedSpeechSeconds(text) / boxSeconds : Infinity
+export function fillRatio(
+  text: string,
+  boxSeconds: number,
+  speed: number,
+): { ratio: number; level: FillLevel } {
+  const ratio = boxSeconds > 0 ? estimatedSpeechSeconds(text, speed) / boxSeconds : Infinity
   return { ratio, level: ratio < 0.85 ? 'ok' : ratio <= 1 ? 'tight' : 'over' }
 }
 
@@ -43,6 +47,7 @@ export function scriptClipStatus(
   clip: ScriptClip,
   asset: Pick<MediaAsset, 'duration'> | undefined,
   effectiveVoice: string,
+  speed: number,
   generation: ActiveGeneration | undefined,
 ): ScriptClipStatus {
   if (generation?.state === 'downloading' || generation?.state === 'generating')
@@ -50,7 +55,8 @@ export function scriptClipStatus(
   if (generation?.state === 'queued') return { state: 'queued' }
   const take = clip.script.take
   if (!take || !asset) return { state: 'draft' }
-  if (take.text !== clip.script.text || take.voice !== effectiveVoice) return { state: 'stale' }
+  if (take.text !== clip.script.text || take.voice !== effectiveVoice || take.speed !== speed)
+    return { state: 'stale' }
   const overflowSeconds = asset.duration - clip.duration
   if (overflowSeconds > overflowTolerance) return { state: 'overflow', overflowSeconds }
   return { state: 'fits' }
@@ -96,7 +102,7 @@ export function scriptSaveRequests(
 
 export function scriptDrawTarget(tracks: Track[], trackId: string) {
   const track = tracks.find((track) => track.id === trackId)
-  return track && track.kind === 'voice' && !track.locked ? track : undefined
+  return track && track.kind === 'audio' && !track.locked ? track : undefined
 }
 
 export function scriptRowAction(

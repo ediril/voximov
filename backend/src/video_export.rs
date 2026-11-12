@@ -2,7 +2,7 @@ use crate::{
     cancellation::{Cancellation, Cancelled},
     ffmpeg::{self, Tool},
     mixer,
-    model::{FrameRate, Project, SAMPLE_RATE, id},
+    model::{FrameRate, Project, SAMPLE_RATE, TrackKind, id},
     storage::Store,
 };
 use anyhow::{Result, ensure};
@@ -88,7 +88,11 @@ fn samples(seconds: f64) -> Samples {
 }
 
 fn placed_clips(project: &Project, length: Samples) -> Vec<PlacedClip<'_>> {
-    let Some(track) = project.tracks.iter().find(|track| track.kind == "video") else {
+    let Some(track) = project
+        .tracks
+        .iter()
+        .find(|track| track.kind == TrackKind::Video)
+    else {
         return Vec::new();
     };
     let mut clips: Vec<_> = track

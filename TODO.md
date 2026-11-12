@@ -33,6 +33,10 @@ To consider later: cursor polish (smoothing, click highlights, zoom on clicks), 
 
 ## Later
 
+### Side panel redesign
+
+The panel at the top left (Files, Mixer, Effects, Script tabs) is inherited and confusing. Redesign it as its own project: first list what each tab is actually used for, then sketch two or three layouts and compare them before building one. Consider making mute's effect visible there too (a muted track is left out of playback and every export). The per-track voice speed menu in the track header is a stopgap and may move into the new design.
+
 ### AI voiceover engine fixes
 
 A three-model review of the voiceover engine (`backend/src/generator.rs`, `speech.rs`, `desktop.rs`, `model.rs`) found these. The UI blocks Play and Record while clips generate, which hides the worst of item 1 for now.

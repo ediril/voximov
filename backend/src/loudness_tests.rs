@@ -154,7 +154,9 @@ fn silence_short_takes_bypass_and_legacy_effects_remain_valid() -> Result<()> {
 }
 
 fn store_track() -> crate::model::Track {
-    crate::model::Track::new("voice", "Voice")
+    let mut track = crate::model::Track::new(crate::model::TrackKind::Audio, "Voice");
+    track.fx_bypass = false;
+    track
 }
 
 #[test]

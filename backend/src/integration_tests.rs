@@ -216,7 +216,10 @@ fn removing_the_last_track_can_be_saved_reopened_and_followed_by_adding_a_track(
     assert_eq!(reopened.project.assets[0].id, asset_id);
     commands::execute(&mut reopened, &json!({"command":"track_add"}))?;
     assert_eq!(reopened.project.tracks.len(), 1);
-    assert_eq!(reopened.project.tracks[0].kind, "audio");
+    assert_eq!(
+        reopened.project.tracks[0].kind,
+        crate::model::TrackKind::Audio
+    );
     assert!(reopened.config.dirty);
     Ok(())
 }
