@@ -1,0 +1,5 @@
+---
+title: No date
+---
+
+Ignored.

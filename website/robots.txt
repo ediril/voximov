@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /_blog_posts/
+Disallow: /tests/
+
+Sitemap: https://voximov.com/sitemap.xml
