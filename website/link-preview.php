@@ -15,7 +15,6 @@ require_once __DIR__ . '/common.php';
         .preview-head h1 { font-size: 62px; font-weight: 700; letter-spacing: -0.035em; max-width: 720px; }
         .preview-head .brand { font-size: 26px; margin-top: 10px; }
         .studio { width: 1072px; }
-        .studio-playhead span { animation: none; }
     </style>
 </head>
 <body>

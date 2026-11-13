@@ -403,7 +403,6 @@ code {
   width: 2px;
   background: var(--text);
   box-shadow: 0 0 12px rgb(231 233 229 / 40%);
-  animation: playhead 16s linear infinite;
 }
 
 .studio-playhead span::before {
@@ -417,23 +416,9 @@ code {
   border-radius: 2px 2px 6px 6px;
 }
 
-@keyframes playhead {
-  from {
-    left: 0%;
-  }
-
-  to {
-    left: 100%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  .studio-playhead span {
-    animation: none;
   }
 }
 

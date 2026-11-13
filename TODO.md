@@ -39,6 +39,10 @@ To consider later: cursor polish (smoothing, click highlights, zoom on clicks), 
 
 ## Later
 
+### Website demo with sound
+
+The timeline illustration at the top of voximov.com is static. Make it a demo: a play button that sweeps the playhead across the tracks while a short sample plays in sync. Generate the script clip's line with the real Kokoro voice in Voximov and put quiet music under it. The recorded voice clips need a real recording, either our own or a licensed sample. Never start sound without a click, and keep the illustration still for visitors who prefer reduced motion.
+
 ### Side panel redesign
 
 The panel at the top left (Files, Mixer, Effects, Script tabs) is inherited and confusing. Redesign it as its own project: first list what each tab is actually used for, then sketch two or three layouts and compare them before building one. Consider making mute's effect visible there too (a muted track is left out of playback and every export). The per-track voice speed menu in the track header is a stopgap and may move into the new design.
