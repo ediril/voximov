@@ -14,7 +14,7 @@ demos, or anything else that needs a voice on top of the picture.
 If your current process is "record in one app, line it up in another, and hope the levels match,"
 Voximov keeps recording, editing and export in one window.
 
-It works best for a single narrator and a finished video. It is not a full video editor: export
+It works best for narrating an existing video recording, in your own voice, an AI voice, or both. It is not a full video editor: export
 produces the audio mix, or on macOS an MP4 of the cut video with that mix, and the original video
 stays untouched.
 

@@ -10,7 +10,7 @@ This guide shows a faster way. You record while you watch the video, fix mistake
 
 ## Before you record
 
-- **Finish the video first.** Trim the screen recording before you narrate it. Narration timed to a finished picture rarely needs to move.
+- **Cut the video first.** Trim the screen recording before you narrate it. Narration timed to the final cut rarely needs to move.
 - **Write notes, not a speech.** A few bullet points for each scene are enough. Most people sound stiff reading full sentences and natural talking from notes.
 - **Wear headphones.** You will hear the video while you talk. Without headphones, the microphone records the video's sound along with your voice.
 - **Find a quiet room with soft surfaces.** A room with curtains, a rug and a sofa sounds better than an empty kitchen. A USB microphone helps, but a quiet room matters more.

@@ -139,7 +139,7 @@ echo partial('nav');
         <div class="wrap narrow center">
             <p class="eyebrow">Who it’s for</p>
             <h2>For people who narrate their own videos</h2>
-            <p class="section-lede">Tutorials, game footage, product demos, course lessons: anything that needs a voice on top of the picture. Voximov works best for one narrator and a finished video. It is not a full video editor, and it never changes your original video.</p>
+            <p class="section-lede">Tutorials, game footage, product demos, course lessons: anything that needs a voice on top of the picture. Voximov is built around the video you already recorded. Trim it, then narrate it in your own voice, an AI voice, or several voices on their own tracks. Add music and export, with just the tools a voiceover needs. Your original file stays exactly as it was.</p>
             <ul class="tags">
                 <li>Tutorials</li>
                 <li>Game footage</li>

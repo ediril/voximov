@@ -39,6 +39,10 @@ To consider later: cursor polish (smoothing, click highlights, zoom on clicks), 
 
 ## Later
 
+### One AI voice per track
+
+A project has one AI voice (`Project.voice`), so every script clip speaks with it and two AI characters cannot talk to each other. Give each audio track its own voice, the way each track already has its own speed: a `speechVoice` on the track that falls back to the project voice, a voice menu next to the speed menu in the track header, and `track_patch` accepting it only for known voices. The generator picks the track's voice, and changing it marks that track's takes out of date. Then update the README and the website's "Who it's for" paragraph (`website/index.php`) and `website/llms.txt` to say "your own voice, AI voices, or any mix of them".
+
 ### Website demo with sound
 
 The timeline illustration at the top of voximov.com is static. Make it a demo: a play button that sweeps the playhead across the tracks while a short sample plays in sync. Generate the script clip's line with the real Kokoro voice in Voximov and put quiet music under it. The recorded voice clips need a real recording, either our own or a licensed sample. Never start sound without a click, and keep the illustration still for visitors who prefer reduced motion.
