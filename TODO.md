@@ -9,7 +9,13 @@ Goal: an AI agent records a feature demo, cuts it, and narrates it end to end th
 Every feature works from the app first: recording, marks, cutting idle time and anchoring are buttons and menus in the UI. The CLI drives the same engine commands for AI agents, so the app and the CLI never get separate implementations.
 
 1. **Kokoro inside the engine, no Docker.** Done: the engine runs Kokoro with `ort` and phonemizes with `misaki-rs` (no espeak-ng, which is GPL-3), downloads the model on first use with checksums, generates sentence by sentence, speaks unknown words with compound splitting, acronym spelling and letter-to-sound guesses, and reports the guessed words. Built-in tech words live in `backend/src/pronunciations.txt`. Remaining:
-   - Your own pronunciations in Settings and per project, in the same sounds-like format (`Zorblax = ZOR-blaks`). The CLI adds entries the same way. Offer to add a guessed word from the "Guessed how to say" notice.
+   - Show and fix guessed pronunciations. Today a guessed word is listed by its spelling only ("Guessed pronunciation: Vidmuse"), which does not say how it will sound, and the only fix is writing phonemes inline (`[Vidmuse](/vˈɪdmjuz/)`), which almost nobody can do. Kokoro's symbols are not even standard IPA (`A`, `I`, `O`, `W`, `Y` are the vowels in day, my, go, now, boy).
+     - Show each guess in the sounds-like format of `pronunciations.txt`, for example "Vidmuse → VID-myooz". Add the reverse of `respell()` that turns phonemes into that spelling, with a round-trip test (`respell` of the spelling gives back the guessed sounds).
+     - Clicking a guessed word in the Script panel opens a field prefilled with the guess. Enter saves `Vidmuse = VID-mews` to a pronunciation list stored in the project, marks every take that uses the word out of date, and stops reporting it as guessed.
+     - Add a second list in Settings for words used in every project, in the same format. The CLI adds entries the same way.
+     - Also accept sounds-like links inline, `[Vidmuse](VID-mews)`, next to the existing phoneme links.
+     - Test that the project list survives save and reopen, and that changing an entry marks only the takes that use the word.
+     - Then show a guess and its sounds-like spelling in the website's Script panel sample (`website/index.php`).
    - Recheck the engine fixes below: the HTTP items (stalled reads, timeouts, TLS, the voice-list pre-check) no longer apply.
 2. **Headless CLI.**
    - A `voximov` command over the existing `studio_command` layer, with JSON output for agents.

@@ -13,7 +13,7 @@ $features = [
 $scriptRows = [
     ['time' => '0:01.2', 'text' => 'Open the menu and import your video.', 'status' => 'Ready', 'tone' => 'fits'],
     ['time' => '0:08.6', 'text' => 'Press R to record while it plays.', 'status' => 'Ready', 'tone' => 'fits'],
-    ['time' => '0:16.4', 'text' => 'Then send the MP4 to Vidmuse.', 'status' => 'Too long', 'tone' => 'overflow', 'guessed' => 'Vidmuse'],
+    ['time' => '0:16.4', 'text' => 'Then export it as an MP4.', 'status' => 'Too long', 'tone' => 'overflow'],
 ];
 
 $languages = ['English', 'Deutsch', 'Español', 'Français', 'Italiano', 'Polski', 'Português', 'Русский', 'Türkçe', 'Українська', '日本語', '한국어', '简体中文'];
@@ -96,7 +96,7 @@ echo partial('nav');
                     <li>For an exact pronunciation, write the sounds in the script: <code>[Voximov](/vˈɑksɪmɑv/)</code></li>
                 </ul>
             </div>
-            <div class="script-panel" role="img" aria-label="The Voximov script list with three generated lines, one too long for its clip, and the word Vidmuse marked as a guessed pronunciation">
+            <div class="script-panel" role="img" aria-label="The Voximov script list with three generated lines, one too long for its clip">
                 <div class="script-panel-head">
                     <span>Script clips</span>
                     <span class="script-voice">Heart (US female)</span>
@@ -106,9 +106,6 @@ echo partial('nav');
                     <span class="script-time"><?= escape($row['time']) ?></span>
                     <span class="script-text"><?= escape($row['text']) ?></span>
                     <span class="script-chip is-<?= $row['tone'] ?>"><?= escape($row['status']) ?></span>
-                    <?php if (!empty($row['guessed'])): ?>
-                    <span class="script-guessed">Guessed pronunciation: <?= escape($row['guessed']) ?></span>
-                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>

@@ -605,12 +605,6 @@ code {
   background: rgb(236 153 147 / 12%);
 }
 
-.script-guessed {
-  grid-column: 2 / -1;
-  color: var(--gold);
-  font-size: 13px;
-}
-
 .facts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1035,10 +1029,6 @@ code {
   }
 
   .script-time {
-    grid-column: 1 / -1;
-  }
-
-  .script-guessed {
     grid-column: 1 / -1;
   }
 
