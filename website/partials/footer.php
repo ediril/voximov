@@ -7,6 +7,5 @@
         <p>&copy; <?= date('Y') ?> Voximov</p>
     </div>
 </footer>
-<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
 </body>
 </html>

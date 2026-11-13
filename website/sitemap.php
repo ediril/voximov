@@ -12,6 +12,7 @@ $posts = get_all_blog_posts();
 $urls = [
     ['loc' => SITE_URL . '/', 'lastmod' => $changed('index.php')],
     ['loc' => SITE_URL . '/blog', 'lastmod' => max([$changed('blog.php'), ...array_column($posts, 'date')])],
+    ['loc' => SITE_URL . '/pricing', 'lastmod' => $changed('pricing.php')],
     ['loc' => SITE_URL . '/privacy', 'lastmod' => $changed('privacy.php')],
     ['loc' => SITE_URL . '/terms', 'lastmod' => $changed('terms.php')],
 ];

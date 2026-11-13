@@ -21,8 +21,8 @@ echo partial('nav');
             <h2>This website</h2>
             <ul>
                 <li>If you join the early-access list, your email address is sent to us through our form provider, <a href="https://web3forms.com/">Web3Forms</a>. We use it only to tell you about Voximov, and we never sell or share it.</li>
-                <li>We count visits with <a href="https://www.simpleanalytics.com/">Simple Analytics</a>, which uses no cookies and collects no personal data.</li>
-                <li>The site sets no cookies of its own.</li>
+                <li>The site uses no analytics, no tracking and no cookies.</li>
+                <li>The site’s font loads from Google Fonts, so Google receives your browser’s request for it, the same way any website receives a visit.</li>
             </ul>
             <h2>Your choices</h2>
             <p>To have your email address removed from the list, or for any question about privacy, write to <a href="mailto:<?= escape(CONTACT_EMAIL) ?>"><?= escape(CONTACT_EMAIL) ?></a>.</p>

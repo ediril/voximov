@@ -11,6 +11,7 @@ Voximov is for people who narrate their own videos: tutorials, game footage, pro
 ## Primary pages
 
 - [Voximov](https://voximov.com/): Product overview and early-access sign-up.
+- [Pricing](https://voximov.com/pricing): Free for noncommercial and personal use; commercial licenses on request.
 - [Voximov Blog](https://voximov.com/blog): Guides on recording voiceovers and narrating videos on a Mac.
 
 ## Optional

@@ -1,4 +1,4 @@
-<header class="page-title">
+<header class="page-title<?= empty($centered) ? '' : ' center' ?>">
     <div class="wrap">
         <?php if (!empty($eyebrow)): ?>
         <p class="eyebrow"><?= escape($eyebrow) ?></p>

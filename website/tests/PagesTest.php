@@ -25,10 +25,10 @@ check(str_contains($home, '"@type":"SoftwareApplication"'), 'The home page descr
 check(str_contains($home, 'name="access_key"') && str_contains($home, 'type="email"'), 'The home page has the email sign-up form');
 check(!str_contains($home, 'Warning:') && !str_contains($home, 'Fatal error'), 'The home page renders without PHP errors');
 
-foreach (['/privacy', '/terms'] as $legal) {
-    [, $page] = render($legal);
-    check(str_contains($home, 'href="' . $legal . '"'), "The footer links to $legal");
-    check(str_contains($page, '<link rel="canonical" href="https://voximov.com' . $legal . '">') && !str_contains($page, 'noindex'), "$legal is a real page");
+foreach (['/pricing', '/privacy', '/terms'] as $linked) {
+    [, $page] = render($linked);
+    check(str_contains($home, 'href="' . $linked . '"'), "Every page links to $linked");
+    check(str_contains($page, '<link rel="canonical" href="https://voximov.com' . $linked . '">') && !str_contains($page, 'noindex'), "$linked is a real page");
 }
 
 [, $blog] = render('/blog');

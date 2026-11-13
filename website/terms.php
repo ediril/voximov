@@ -18,7 +18,7 @@ echo partial('nav');
                 <li>Personal use such as personal study, private entertainment and hobby projects, with no anticipated commercial application.</li>
                 <li>Charitable organizations, educational institutions, public research organizations, public safety or health organizations, environmental protection organizations and government institutions.</li>
             </ul>
-            <p>Any other commercial use requires a separate paid license. Write to <a href="mailto:<?= escape(CONTACT_EMAIL) ?>"><?= escape(CONTACT_EMAIL) ?></a> for pricing before you start such use.</p>
+            <p>Any other commercial use requires a separate paid license, agreed before you start such use. See <a href="/pricing">pricing</a>.</p>
             <p>The license does not allow you to modify, redistribute or resell Voximov, or to build other works from it. If anything on this page differs from the license, the license applies.</p>
 
             <h2>Your content</h2>
