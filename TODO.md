@@ -39,6 +39,18 @@ To consider later: cursor polish (smoothing, click highlights, zoom on clicks), 
 
 ## Later
 
+### Basic editing tools
+
+Tools that fit a voiceover studio for recorded demos. Each is an engine command first, so the CLI gets it too. Not planned: titles, transitions, overlays and stacking several videos, which belong in a full video editor. Removing idle time (step 4) and zoom on clicks (consider later) are listed above.
+
+1. **Cut a section and close the gap.** Today removing ten seconds takes two splits, a delete on every track and dragging everything after it to the left, or the gap exports as black frames. Instead: select a time range, press Delete, and every unlocked track loses that range and moves later clips left, in one undo step and on video frame boundaries. Decide what happens to a script clip that the range only partly covers. Step 4's Remove idle time is many of these cuts at once, so it builds on this command.
+2. **Speed up a section.** Play a stretch of video at 2×, 4× or 8× for installs, loading and long typing. The video's own sound is muted there. The preview and the export must agree on the new timing.
+3. **Freeze frame.** Hold the picture on one frame for a set time so narration can finish. Offer it when a script clip is too long for its picture.
+4. **Blur a region.** A rectangle over the video for a time range, to hide an email address, an API key or a notification. Blurred in the preview and burned into the export.
+5. **Captions from script clips.** Export the script clips' text as an SRT file, and optionally burn it into the video. Recorded voice would need transcription first. Check which subtitle filters the slim FFmpeg build includes.
+6. **Fades and music ducking.** Fade the video in from black and out at the end. Lower a music track automatically while a voice track has sound.
+7. **Export sizes and GIF.** Export at 1080p or 720p, and as an animated GIF for READMEs and docs.
+
 ### One AI voice per track
 
 A project has one AI voice (`Project.voice`), so every script clip speaks with it and two AI characters cannot talk to each other. Give each audio track its own voice, the way each track already has its own speed: a `speechVoice` on the track that falls back to the project voice, a voice menu next to the speed menu in the track header, and `track_patch` accepting it only for known voices. The generator picks the track's voice, and changing it marks that track's takes out of date. Then update the README and the website's "Who it's for" paragraph (`website/index.php`) and `website/llms.txt` to say "your own voice, AI voices, or any mix of them".
