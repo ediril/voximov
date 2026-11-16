@@ -27,9 +27,6 @@
   or fixing that blocker the next implementation task. Do not land a bounded,
   partial, or proxy version of the mechanism unless the user explicitly asks for
   that scaffold after the blocker is explained.
-- Before calling UI or interaction work done, read the new code for bugs and
-  run the browser tests, adding a spec that drives the new
-  behavior. Passing rests and a screenshot only show the happy path renders.
 - Speak precisely about verification level. Do not say a mechanism "works",
   "is fixed", or "is done" for an architecture goal when only an isolated unit
   test or controlled diagnostic passes. State the actual level of evidence:
@@ -78,15 +75,14 @@
   the owner says the numbers are wrong. Before changing a calculation, run it
   on a copy of the real data and check the numbers by hand.
 - Before reporting a change done, read the new code for bugs, edge cases, and
-  stale assumptions, and drive the real interactions in a browser while
+  stale assumptions, and drive the real interactions in the app while
   watching for errors. Say in the report what was exercised.
-- Verification budget: tests for new behavior (one test per rule, a browser
-  spec when there is a new interaction), one full run of the project's test
-  suites and checks (listed in `README.md`) before reporting done, and a
-  check against a copy of the real data when a calculation changes. Skip,
-  unless there is a specific reason: mutation-checking every test, repeated
-  full browser runs, screenshots after a spec already drove the interaction,
-  and byte-for-byte equivalence harnesses outside large refactors.
+- Verification budget: tests for new behavior (one test per rule), one full
+  run of the project's test suites and checks (listed in `README.md`) before
+  reporting done, and a check against a copy of the real data when a
+  calculation changes. Skip, unless there is a specific reason:
+  mutation-checking every test, repeated full test runs, and byte-for-byte
+  equivalence harnesses outside large refactors.
 
 ## Versioning
 - Follow the version scheme in the project's versioning note in `decisions/`:
